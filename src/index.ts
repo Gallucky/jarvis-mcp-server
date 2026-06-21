@@ -30,6 +30,9 @@ import { registerVaultTools } from "./tools/vault.js";
 import { registerJarvisTools } from "./tools/jarvis.js";
 import { registerSqliteTools } from "./tools/sqlite.js";
 import { registerFilesystemTools } from "./tools/filesystem.js";
+import { readFileSync } from "fs";
+import { dirname, join } from "path/win32";
+import { fileURLToPath } from "url";
 
 // ---------------------------------------------------------------------------
 // In-memory OAuth stores (personal server -- resets on restart, fine)
@@ -208,6 +211,14 @@ async function runHTTP(obsidian: ObsidianClient): Promise<void> {
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+
+  // serve favicon so Claude's connector UI shows an icon
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  app.get("/favicon.ico", (_req, res) => {
+    res.setHeader("Content-Type", "image/svg+xml");
+    res.send(readFileSync(join(__dirname, "../public/favicon.svg")));
+  });
+
 
   // SDK OAuth router (sets up /.well-known/*, /register, /authorize, /token)
   app.use(mcpAuthRouter({ provider, issuerUrl: baseUrl }));

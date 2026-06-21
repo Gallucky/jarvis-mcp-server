@@ -136,13 +136,44 @@ pm2 start dist/index.js --name jarvis-mcp
 pm2 save
 ```
 
-On Windows, add `pm2 resurrect` to Task Scheduler → trigger: At startup.
+[PM2](https://pm2.keymetrics.io/) is a process manager for Node.js. It keeps your server
+running in the background without a terminal window open, automatically restarts it if it
+crashes, and lets you check its status at any time with `pm2 status`.
+
+> **Why not just `npm start`?**
+> Running `npm start` directly ties the server to your terminal session — close the window
+> and the server dies. PM2 runs it as a background daemon that survives terminal closures.
+
+#### ⚙️ Optional: Auto-start on Windows boot
+
+By default PM2 itself doesn't survive a reboot on Windows. To fix that, this repo includes
+`pm2-start.bat` — a one-line script that tells PM2 to restore your saved process list:
+
+```bat
+pm2 resurrect
+```
+
+To make the server start automatically every time Windows boots:
+
+1. Press `Win + R`, type `taskschd.msc`, press Enter
+2. Click **Create Basic Task**
+3. **Name:** `jarvis-mcp-server` (or anything you like)
+4. **Trigger:** When the computer starts
+5. **Action:** Start a program → browse to `pm2-start.bat` in this repo
+6. Finish
+
+Now the server comes back online automatically after every reboot — no manual intervention needed.
 
 ### 7. Connect Claude
 
 Settings → Connectors → Add connector → enter your Tailscale URL + `/mcp`
 
 Use `OAUTH_CLIENT_ID` and `OAUTH_CLIENT_SECRET` from your `.env` when prompted.
+
+> **Connector icon:** Claude uses Google's favicon service to display connector icons.
+> Since this server runs on a Tailscale domain (`*.ts.net`) that Google can't reach,
+> the connector will show a generic placeholder icon. This is cosmetic only — everything
+> works normally. A custom icon would require pointing a public domain at your server.
 
 ---
 
