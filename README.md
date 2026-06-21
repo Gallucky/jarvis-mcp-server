@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://mintlify.s3.us-west-1.amazonaws.com/mcp/logo/light.svg" alt="MCP Logo" width="60" />
+<img src="https://mintlify.s3.us-west-1.amazonaws.com/mcp/logo/light.svg" alt="MCP Logo" width="700" />
 
 # jarvis-mcp-server
 
