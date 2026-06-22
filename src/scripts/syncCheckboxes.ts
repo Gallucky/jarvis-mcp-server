@@ -14,6 +14,7 @@ interface Frontmatter {
 }
 
 interface CheckboxRow {
+    section: string;
     zone: string;
     topic: string;
     exercise_set: string;
@@ -49,18 +50,60 @@ function parseFrontmatter(raw: string): Frontmatter {
     return { lesson_number, area, section };
 }
 
-function parseCheckboxes(body: string): CheckboxRow[] {
+// Headers that group assignments by *when/why* (this week's homework, next
+// lesson's prep, vocab, reinforcement) rather than by exam section/zone.
+// They show up at varying heading depths across files (e.g. "#" in most
+// lessons, "##" in Lesson 15) so they're matched by content, not level.
+const STRUCTURAL_HEADER_MARKERS = ["שיעורי בית", "הכנה לשיעור", "אוצר מילים", "חיזוק"];
+
+// A header normally just renames the zone (e.g. "ספר קושיות"), inheriting
+// the note's frontmatter section. Two explicit overrides appear in practice:
+//   "(פרק X)"   → this chunk's exam section is actually X, not the frontmatter default
+//   "(תחת X)"   → file this chunk's zone as X instead of the header's own label
+// A header can also declare its section just by naming it directly (e.g. "אנגלית").
+const SECTION_KEYWORDS = ["מילולי", "אנגלית", "כמותי"] as const;
+
+function classifyHeader(cleanedText: string, defaultSection: string): { zone: string; section: string } {
+    let text = cleanedText;
+    let section = defaultSection;
+
+    const chapterMatch = text.match(/\(פרק\s+(מילולי|כמותי|אנגלית)\)/);
+    if (chapterMatch) {
+        section = chapterMatch[1];
+        text = text.replace(chapterMatch[0], "").trim();
+    } else {
+        for (const keyword of SECTION_KEYWORDS) {
+            if (text.includes(keyword)) {
+                section = keyword;
+                break;
+            }
+        }
+    }
+
+    const underMatch = text.match(/\(תחת\s+([^)]+)\)/);
+    const zone = underMatch
+        ? underMatch[1].trim()
+        : text.replace(/[-–]+$/, "").trim();
+
+    return { zone, section };
+}
+
+function parseCheckboxes(body: string, defaultSection: string): CheckboxRow[] {
     const rows: CheckboxRow[] = [];
     let currentZone = "";
+    let currentSection = defaultSection;
 
     for (const line of body.split("\n")) {
-        // ## header → zone (strip ** bold markers and trailing dashes)
-        if (/^## /.test(line)) {
-            currentZone = line
-                .replace(/^##\s+/, "")
-                .replace(/\*\*/g, "")
-                .replace(/[-–]+$/, "")
-                .trim();
+        // Heading of any level → either a structural grouping (skip, keep
+        // current zone/section) or a real zone header (re-classify).
+        const heading = line.match(/^#{1,6}\s+(.*)$/);
+        if (heading) {
+            const cleaned = heading[1].replace(/\*\*/g, "").trim();
+            if (!STRUCTURAL_HEADER_MARKERS.some((marker) => cleaned.includes(marker))) {
+                const info = classifyHeader(cleaned, defaultSection);
+                currentZone = info.zone;
+                currentSection = info.section;
+            }
             continue;
         }
 
@@ -88,7 +131,10 @@ function parseCheckboxes(body: string): CheckboxRow[] {
             exercise_set = "";
         }
 
-        rows.push({ zone: currentZone, topic, exercise_set, completed: completed as 0 | 1, url });
+        rows.push({
+            section: currentSection, zone: currentZone, topic, exercise_set,
+            completed: completed as 0 | 1, url,
+        });
     }
 
     return rows;
@@ -124,11 +170,11 @@ const syncAll = db.transaction(() => {
             const body = bodyStart !== -1 ? content.slice(bodyStart + 3) : content;
 
             const fm = parseFrontmatter(content);
-            const rows = parseCheckboxes(body);
+            const rows = parseCheckboxes(body, fm.section);
 
             deleteByPath.run(notePath);
             for (const row of rows) {
-                insert.run(notePath, fm.lesson_number, fm.area, fm.section,
+                insert.run(notePath, fm.lesson_number, fm.area, row.section,
                     row.zone, row.topic, row.exercise_set, row.completed, row.url, now);
                 total++;
             }

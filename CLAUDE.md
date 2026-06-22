@@ -49,6 +49,22 @@ exercise_completions (
 ```
 Populated from: `C:/Gal's Obsidian Vault/01 Notes/Psychometric/Lessons/Homework/*.md`
 
+`section` defaults to the note's frontmatter `section:` value but can be overridden
+per checkbox-group by its heading text (any `#` depth — Lesson 15 uses `###` for
+some zones, others use `##`). `syncCheckboxes.ts`'s `classifyHeader()` recognizes:
+- `(פרק X)` or the section name appearing bare in the heading (e.g. `אנגלית`) →
+  `section = X` for that chunk
+- `(תחת X)` → `zone = X`, discarding the heading's own label (e.g. a "גרפים"
+  heading marked `(תחת קושיות)` files those checkboxes under zone `קושיות`)
+- Headings matching `STRUCTURAL_HEADER_MARKERS` (`שיעורי בית`, `הכנה לשיעור`,
+  `אוצר מילים`, `חיזוק`) are assignment-category labels, not zones — skipped
+  regardless of heading depth
+
+`LESSON_FOLDERS` only scans `01 Notes/.../Homework/` — if a folder is ever removed
+from that list (as `00 Inbox/_temp-backup/` was at some point), `deleteByPath` won't
+clean up its rows since it only deletes paths it's about to re-insert. Check for
+orphaned `note_path` prefixes after restructuring vault folders.
+
 ## Vault paths
 - Homework files: `01 Notes/Psychometric/Lessons/Homework/`
 - Distillations: `_AI-SPACE/Distillations/`
