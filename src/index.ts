@@ -33,6 +33,9 @@ import { registerFilesystemTools } from "./tools/filesystem.js";
 import { readFileSync } from "fs";
 import { dirname, join } from "path/win32";
 import { fileURLToPath } from "url";
+import db from "./services/db.js";
+import { registerStudyTools } from "./tools/study/psychometric.js";
+import { dashboardRouter } from "./routes/dashboard.js";
 
 // ---------------------------------------------------------------------------
 // In-memory OAuth stores (personal server -- resets on restart, fine)
@@ -68,6 +71,7 @@ function buildServer(obsidian: ObsidianClient): McpServer {
   registerJarvisTools(server, obsidian);
   registerSqliteTools(server);
   registerFilesystemTools(server);
+  registerStudyTools(server, db);
   return server;
 }
 
@@ -211,13 +215,15 @@ async function runHTTP(obsidian: ObsidianClient): Promise<void> {
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+  app.use(dashboardRouter);
 
-  // serve favicon so Claude's connector UI shows an icon
+  // serve favicon + the dashboard's bundled JS so Claude's connector UI shows an icon
   const __dirname = dirname(fileURLToPath(import.meta.url));
   app.get("/favicon.ico", (_req, res) => {
     res.setHeader("Content-Type", "image/svg+xml");
     res.send(readFileSync(join(__dirname, "../public/favicon.svg")));
   });
+  app.use(express.static(join(__dirname, "../public")));
 
 
   // SDK OAuth router (sets up /.well-known/*, /register, /authorize, /token)

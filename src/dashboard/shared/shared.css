@@ -1,0 +1,96 @@
+@font-face {
+  font-family: 'Rubik';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/Rubik-hebrew.woff2') format('woff2');
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
+@font-face {
+  font-family: 'Rubik';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/Rubik-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  --bg: #0d0d0d;
+  --card-bg: #161616;
+  --border: #252525;
+  --border-hover: #3a3a3a;
+  --text: #e2e2e2;
+  --muted: #555;
+  --muted-2: #444;
+  --accent: #a78bfa;
+  --green: #34d399;
+  --red: #f87171;
+  --radius: 12px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  font-size: clamp(15px, 0.6vw + 12px, 18px);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Rubik', 'Segoe UI', 'Arial Hebrew', sans-serif;
+  line-height: 1.6;
+  padding: clamp(14px, 3vw, 32px);
+}
+
+.dashboard {
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 1.1rem;
+}
+
+.header-title { font-size: 1.35rem; font-weight: 700; color: var(--accent); }
+.header-sync { color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
+
+.back-link {
+  display: inline-block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-decoration: none;
+  margin-bottom: 4px;
+  transition: color 0.2s ease;
+}
+.back-link:hover { color: var(--accent); }
+
+/* Generic card */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  transition: border-color 0.2s ease;
+}
+.card:hover { border-color: #333; }
+.card-title {
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 0.85rem;
+}
+
+/* Ring chart */
+.ring-chart { transition: transform 0.2s ease; }
+.ring-chart-progress { transition: stroke-dashoffset 0.5s ease; }

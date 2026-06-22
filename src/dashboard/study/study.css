@@ -1,0 +1,146 @@
+@import '../shared/shared.css';
+
+.refresh-btn {
+  background: #1e1e1e;
+  color: #e2e2e2;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-family: inherit;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+.refresh-btn:hover { background: #272727; border-color: #a78bfa; }
+.refresh-btn:active { transform: scale(0.96); }
+
+/* Stat row */
+.stats-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.stat-card {
+  background: #161616;
+  border: 1px solid #252525;
+  border-radius: 12px;
+  padding: 0.9rem 1.1rem;
+  flex: 1;
+  min-width: 130px;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.stat-card:hover {
+  border-color: #3a3a3a;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+.stat-card-label {
+  color: #555;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 6px;
+}
+.stat-card-value { font-size: 1.7rem; font-weight: 700; line-height: 1; }
+
+.ring-card {
+  background: #161616;
+  border: 1px solid #252525;
+  border-radius: 12px;
+  padding: 0.7rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.ring-card:hover { border-color: #3a3a3a; transform: translateY(-2px); }
+.ring-card:hover .ring-chart { transform: scale(1.06); }
+
+/* Section grid */
+.grid-section {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 12px;
+  margin-bottom: 1rem;
+}
+@media (max-width: 860px) {
+  .grid-section { grid-template-columns: 1fr; }
+}
+
+/* Section progress bars */
+.progress-row { margin-bottom: 0.7rem; }
+.progress-row:last-child { margin-bottom: 0; }
+.progress-row-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.progress-row-meta { color: #555; font-size: 0.78rem; }
+.progress-track {
+  height: 6px;
+  background: #252525;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+
+/* Topics table */
+.topics-table { width: 100%; border-collapse: collapse; }
+.topics-table thead tr { color: #444; font-size: 0.78rem; }
+.topics-table th { padding-bottom: 6px; font-weight: 500; }
+.topics-table tbody tr { border-top: 1px solid #1e1e1e; transition: background 0.2s ease; }
+.topics-table tbody tr:hover { background: #1a1a1a; }
+.topics-table td { padding: 7px 0; }
+.topic-name {
+  max-width: clamp(110px, 18vw, 220px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.topic-section { color: #555; font-size: 0.78rem; padding-inline-start: 8px; }
+.topic-remaining {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-inline-start: 8px;
+}
+.topic-remaining-count { font-weight: 600; min-width: 1.4em; text-align: left; }
+.topic-remaining-track {
+  flex: 1;
+  min-width: 36px;
+  height: 4px;
+  background: #252525;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.topic-remaining-fill { height: 100%; background: #a78bfa; border-radius: 2px; transition: width 0.4s ease; }
+
+/* Lessons */
+.lessons-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.lesson-chip {
+  display: block;
+  text-align: center;
+  min-width: 44px;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 8px;
+  padding: 4px;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+.lesson-chip[href]:hover { background: #1c1c1c; transform: translateY(-2px); cursor: pointer; }
+.lesson-bar {
+  height: 56px;
+  width: 32px;
+  margin: 0 auto;
+  background: #1e1e1e;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.lesson-bar-fill { background: #a78bfa; transition: height 0.4s ease; }
+.lesson-number { color: #555; font-size: 0.7rem; margin-top: 4px; }
+.lesson-pct { font-size: 0.7rem; color: #888; }

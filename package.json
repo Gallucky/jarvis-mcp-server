@@ -7,8 +7,12 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "clean": "rm -rf dist"
+    "dev:dashboard": "esbuild home=src/dashboard/home/index.tsx study=src/dashboard/study/index.tsx --bundle --outdir=public --jsx=automatic --target=es2020 --charset=utf8 --external:/fonts/* --sourcemap --watch",
+    "build": "tsc && npm run build:dashboard",
+    "build:dashboard": "esbuild home=src/dashboard/home/index.tsx study=src/dashboard/study/index.tsx --bundle --minify --outdir=public --jsx=automatic --target=es2020 --charset=utf8 --external:/fonts/*",
+    "clean": "rm -rf dist",
+    "migrate": "tsc && node dist/scripts/migrate.js",
+    "sync:study": "tsc && node dist/scripts/syncCheckboxes.js"
   },
   "engines": {
     "node": ">=18"
@@ -19,12 +23,17 @@
     "better-sqlite3": "^12.11.1",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/express": "^4.17.21",
     "@types/node": "^22.10.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "esbuild": "^0.24.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }
