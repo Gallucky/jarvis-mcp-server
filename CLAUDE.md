@@ -69,3 +69,27 @@ orphaned `note_path` prefixes after restructuring vault folders.
 - Homework files: `01 Notes/Psychometric/Lessons/Homework/`
 - Distillations: `_AI-SPACE/Distillations/`
 - Allowed FS paths: `C:/Gal's Obsidian Vault`, `C:/jarvis-mcp-server`
+
+## Code Style — Jarvis Rules
+
+### File size
+- Max 200–300 lines of logic per file (comments and blank lines don't count)
+- When a file approaches the limit, extract a new module — don't keep adding
+
+### Functions
+- Max ~25 lines per function
+- One function = one job, no exceptions
+
+### Naming
+- Names must be self-documenting — if you need a comment to explain a name, rename it
+- No abbreviations unless they're universally known (e.g. `id`, `url`, `err`)
+
+### Cleanliness
+- No dead code, no commented-out blocks
+- No over-engineering — solve the problem in front of you, not the imaginary future one
+- Prefer flat over nested (early returns, guard clauses)
+- DRY but don't abstract prematurely — three repetitions before extracting
+
+### Output
+- When creating a new file, state its line count (excluding comments + whitespace)
+- If a requested feature would push a file past 300 lines, split it first and tell me the plan

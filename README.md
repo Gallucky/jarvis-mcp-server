@@ -151,7 +151,7 @@ your machine — see [Privacy & data separation](#privacy--data-separation).
 Edit `src/constants.ts`:
 - `FS_ALLOWED_PATHS` — directories you want Claude's filesystem tools to access
 - `CLAUDE_USAGE_DIR` — where the dashboard's Cowork usage JSONL logs live (Claude Code's own logs are read directly from `~/.claude/projects/`)
-- `CLAUDE_LIMITS` / `COWORK_LIMITS` — floors for the dashboard's rate-limit bars. Anthropic doesn't publish exact Claude Code token quotas, so these are only a starting point — the dashboard raises the effective limit automatically once it has enough usage history (see `src/services/claudeData.ts`)
+- `CLAUDE_LIMITS` / `COWORK_LIMITS` — floors for the dashboard's rate-limit bars. Anthropic doesn't publish exact Claude Code token quotas, so these are only a starting point — the dashboard raises the effective limit automatically once it has enough usage history (see `src/services/claudeData/overview.ts`)
 
 ### 4. Create the database
 

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import db from "../services/db.js";
-import * as claudeData from "../services/claudeData.js";
+import * as claudeData from "../services/claudeData/index.js";
 import { execSync } from "child_process";
 
 export const dashboardRouter = Router();
