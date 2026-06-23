@@ -1,6 +1,7 @@
 import { Router } from "express";
 import db from "../services/db.js";
 import * as claudeData from "../services/claudeData.js";
+import { execSync } from "child_process";
 
 export const dashboardRouter = Router();
 
@@ -86,6 +87,16 @@ dashboardRouter.get("/api/claude/sessions/:id", (req, res) => {
 
 dashboardRouter.get("/api/claude/costs", (_req, res) => {
     res.json(claudeData.getCosts());
+});
+
+dashboardRouter.post("/api/sync-study", (_req, res) => {
+    try {
+        execSync("node dist/scripts/syncCheckboxes.js", { stdio: "pipe", windowsHide: true });
+        res.json({ success: true, message: "Study progress synchronized successfully." });
+    } catch (err) {
+        console.error("Error synchronizing study progress:", err);
+        res.status(500).json({ success: false, error: (err) });
+    }
 });
 
 function htmlShell(title: string, bundle: string, dir: "rtl" | "ltr" = "rtl", lang = "he"): string {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Stats } from '../types';
 import { RingChart } from '../../shared/RingChart';
 import { StatCard } from './StatCard';
@@ -14,25 +14,69 @@ function obsidianUri(notePath: string): string {
   return `obsidian://open?vault=${encodeURIComponent(VAULT_NAME)}&file=${encodeURIComponent(withoutExt)}`;
 }
 
+const SYNC_POLL_INTERVAL_MS = 2000;
+const SYNC_MAX_ATTEMPTS = 15; // ~30s of polling before giving up and showing whatever we have
+
 export function Study() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastSync, setLastSync] = useState('—');
+  const [studySyncing, setStudySyncing] = useState(false);
+  const cancelledRef = useRef(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const syncStudyData = useCallback(async (lastStats: string) => {
     try {
-      const data = await fetch('/api/stats').then(r => r.json());
-      setStats(data);
-      setLastSync(new Date().toLocaleTimeString('he-IL'));
+      await fetch('/api/sync-study', { method: 'POST' });
     } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
+      console.error('Error syncing study progress:', e);
+    }
+
+    // Poll until the sync script's effect shows up in the data, or we give up.
+    for (let attempt = 0; attempt < SYNC_MAX_ATTEMPTS; attempt++) {
+      if (cancelledRef.current) return;
+      await new Promise(resolve => setTimeout(resolve, SYNC_POLL_INTERVAL_MS));
+      if (cancelledRef.current) return;
+      try {
+        const data = await fetch('/api/stats').then(r => r.json());
+        if (cancelledRef.current) return;
+        setStats(data);
+        setLastSync(new Date().toLocaleTimeString('he-IL'));
+
+        if (JSON.stringify(data) !== lastStats) return;
+      } catch (e) {
+        console.error(e);
+      }
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setStudySyncing(true);
+    let lastStats = JSON.stringify(stats);
+
+    // Fetching the updated stats.
+    try {
+      const data = await fetch('/api/stats').then(r => r.json());
+      if (!cancelledRef.current) {
+        setStats(data);
+        setLastSync(new Date().toLocaleTimeString('he-IL'));
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      if (!cancelledRef.current) setLoading(false);
+    }
+
+    // Calling the sync:study script endpoint, then poll until it lands.
+    await syncStudyData(lastStats);
+    if (!cancelledRef.current) setStudySyncing(false);
+  }, []);
+
+  useEffect(() => {
+    cancelledRef.current = false;
+    load();
+    return () => { cancelledRef.current = true; };
+  }, [load]);
 
   if (!stats) return (
     <div style={{ textAlign: 'center', padding: 60, color: '#555' }}>
@@ -53,7 +97,9 @@ export function Study() {
           <div className="header-title">📊 Study Dashboard</div>
           <div className="header-sync">עדכון: {lastSync}</div>
         </div>
-        <button className="refresh-btn" onClick={load}>⟳ רענן</button>
+        <button className="refresh-btn" onClick={load} disabled={studySyncing}>
+          {studySyncing ? '⟳ מעדכן...' : '⟳ רענן'}
+        </button>
       </div>
 
       {/* Stats row */}
