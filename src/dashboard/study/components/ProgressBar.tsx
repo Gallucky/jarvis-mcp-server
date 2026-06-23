@@ -14,7 +14,7 @@ export function ProgressBar({ label, done, total, color }: ProgressBarProps) {
         <span className="progress-row-meta">{done}/{total} · {pct}%</span>
       </div>
       <div className="progress-track">
-        <div className="progress-fill" style={{ width: pct + '%', background: color }} />
+        <div className="progress-fill" style={{ width: pct + '%', background: color, boxShadow: `0 0 10px -1px ${color}` }} />
       </div>
     </div>
   );

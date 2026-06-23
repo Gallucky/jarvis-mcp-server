@@ -37,6 +37,9 @@ import db from "./services/db.js";
 import { registerStudyTools } from "./tools/study/psychometric.js";
 import { dashboardRouter } from "./routes/dashboard.js";
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(readFileSync(join(__dirname, "../package.json"), "utf-8")) as { version: string };
+
 // ---------------------------------------------------------------------------
 // In-memory OAuth stores (personal server -- resets on restart, fine)
 // ---------------------------------------------------------------------------
@@ -66,7 +69,7 @@ function requireEnv(name: string): string {
 }
 
 function buildServer(obsidian: ObsidianClient): McpServer {
-  const server = new McpServer({ name: "jarvis-mcp-server", version: "1.0.0" });
+  const server = new McpServer({ name: "jarvis-mcp-server", version: pkg.version });
   registerVaultTools(server, obsidian);
   registerJarvisTools(server, obsidian);
   registerSqliteTools(server);
@@ -218,7 +221,6 @@ async function runHTTP(obsidian: ObsidianClient): Promise<void> {
   app.use(dashboardRouter);
 
   // serve favicon + the dashboard's bundled JS so Claude's connector UI shows an icon
-  const __dirname = dirname(fileURLToPath(import.meta.url));
   app.get("/favicon.ico", (_req, res) => {
     res.setHeader("Content-Type", "image/svg+xml");
     res.send(readFileSync(join(__dirname, "../public/favicon.svg")));

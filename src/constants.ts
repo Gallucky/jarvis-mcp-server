@@ -12,3 +12,12 @@ export const FS_ALLOWED_PATHS = [
     "C:/Gal's Obsidian Vault",
     "C:/jarvis-mcp-server",
 ];
+
+// Claude usage JSONL logs, read directly by the /api/claude-usage dashboard endpoint.
+export const CLAUDE_USAGE_DIR = "C:/Gal's Obsidian Vault/_AI-SPACE/claude-usage";
+
+// CHANGE THESE when Anthropic updates rate limits.
+export const CLAUDE_LIMITS = {
+    daily: { tokens: 1_000_000, label: "יומי" },
+    weekly: { tokens: 5_000_000, label: "שבועי" },
+};

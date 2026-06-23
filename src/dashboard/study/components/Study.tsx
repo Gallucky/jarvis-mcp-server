@@ -5,7 +5,7 @@ import { StatCard } from './StatCard';
 import { ProgressBar } from './ProgressBar';
 import { Card } from './Card';
 
-const COLORS = ['#a78bfa', '#60a5fa', '#34d399', '#fbbf24', '#f87171'];
+const COLORS = ['#8b7bff', '#2dd4bf', '#34d399', '#fbbf24', '#f87171'];
 
 const VAULT_NAME = "Gal's Obsidian Vault";
 
@@ -76,37 +76,39 @@ export function Study() {
         </Card>
 
         <Card title="נושאים — מה נשאר">
-          <table className="topics-table">
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'right' }}>נושא</th>
-                <th style={{ textAlign: 'right' }}>מקטע</th>
-                <th style={{ textAlign: 'left' }}>נותר</th>
-              </tr>
-            </thead>
-            <tbody>
-              {byTopic.slice(0, 9).map(t => {
-                const tp = t.total ? Math.round(t.done / t.total * 100) : 0;
-                return (
-                  <tr key={t.topic}>
-                    <td className="topic-name">{t.topic || '—'}</td>
-                    <td className="topic-section">{t.section}</td>
-                    <td>
-                      <div className="topic-remaining">
-                        <span className="topic-remaining-count"
-                          style={{ color: t.remaining > 0 ? '#f87171' : '#34d399' }}>
-                          {t.remaining}
-                        </span>
-                        <div className="topic-remaining-track">
-                          <div className="topic-remaining-fill" style={{ width: tp + '%' }} />
+          <div className="topics-table-scroll">
+            <table className="topics-table">
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'right' }}>נושא</th>
+                  <th style={{ textAlign: 'right' }}>מקטע</th>
+                  <th style={{ textAlign: 'left' }}>נותר</th>
+                </tr>
+              </thead>
+              <tbody>
+                {byTopic.map(t => {
+                  const tp = t.total ? Math.round(t.done / t.total * 100) : 0;
+                  return (
+                    <tr key={`${t.section}-${t.topic}`}>
+                      <td className="topic-name">{t.topic || '—'}</td>
+                      <td className="topic-section">{t.section}</td>
+                      <td>
+                        <div className="topic-remaining">
+                          <span className="topic-remaining-count"
+                            style={{ color: t.remaining > 0 ? '#f87171' : '#34d399' }}>
+                            {t.remaining}
+                          </span>
+                          <div className="topic-remaining-track">
+                            <div className="topic-remaining-fill" style={{ width: tp + '%' }} />
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </Card>
       </div>
 

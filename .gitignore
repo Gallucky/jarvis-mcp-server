@@ -6,18 +6,31 @@ node_modules/
 
 # Build output
 dist/
+
+# Dashboard bundles (add new ones here as pages are added)
 public/home.js
 public/home.js.map
 public/home.css
 public/study.js
 public/study.js.map
 public/study.css
+public/claude.js
+public/claude.js.map
+public/claude.css
 
 # Database and local data files
 data/*.db
 data/*.db-shm
 data/*.db-wal
 data/test.txt
+data/.fuse_hidden*
+
+# Permanent real-data backup (npm run db:backup-real) — never committed, ever
+data/real-backup/
+
+# Logs
+*.log
+logs/
 
 # OS noise
 .DS_Store

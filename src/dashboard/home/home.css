@@ -3,12 +3,18 @@
 .home-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .home-block {
-  background: var(--card-bg);
+  position: relative;
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02) 45%, rgba(255, 255, 255, 0.015)),
+    var(--card-bg);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
   border: 1px solid var(--border);
+  border-top-color: rgba(255, 255, 255, 0.18);
   border-radius: var(--radius);
   padding: 1.3rem 1rem;
   display: flex;
@@ -18,22 +24,31 @@
   text-align: center;
   color: inherit;
   text-decoration: none;
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 40px -22px rgba(0, 0, 0, 0.65);
+  transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+}
+.home-block::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% -12%, rgba(255, 255, 255, 0.18), transparent 55%);
+  pointer-events: none;
 }
 a.home-block:hover {
   border-color: var(--border-hover);
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  transform: translateY(-4px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 26px 50px -22px rgba(0, 0, 0, 0.75), 0 0 36px -8px var(--accent);
   cursor: pointer;
 }
 a.home-block:hover .ring-chart { transform: scale(1.06); }
 
 .home-block-idea {
   border-style: dashed;
-  opacity: 0.55;
+  opacity: 0.5;
 }
 
-.home-block-icon { font-size: 1.8rem; }
+.home-block-icon { font-size: 1.8rem; filter: drop-shadow(0 0 10px rgba(139, 123, 255, 0.4)); }
 .home-block-name { font-weight: 600; font-size: 0.95rem; }
 
 .home-block-badge {
@@ -41,6 +56,7 @@ a.home-block:hover .ring-chart { transform: scale(1.06); }
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 2px 10px;
