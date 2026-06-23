@@ -7,7 +7,7 @@
 **A personal MCP server for your Obsidian vault, SQLite database, and filesystem —
 accessible from any Claude client, anywhere.**
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](package.json)
 [![MCP](https://img.shields.io/badge/protocol-MCP-8A2BE2)](https://modelcontextprotocol.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Node](https://img.shields.io/badge/Node.js-≥18-339933?logo=node.js&logoColor=white)](https://nodejs.org)
@@ -99,7 +99,7 @@ in a browser:
 |---|---|
 | `/dashboard` | Home hub — a grid of blocks linking to the pages below, plus placeholders for future tools |
 | `/dashboard/study` | Psychometric homework progress: completion % by section/lesson/topic |
-| `/dashboard/claude` | Claude usage: daily/weekly token progress bars, cost estimates, session history |
+| `/dashboard/claude` | Claude Analytics — a multi-page app (Overview, Projects, Sessions, Costs) covering both Claude Code and Cowork usage: token/cost trends, model breakdown, activity heatmap, self-calibrating rate-limit bars, per-session conversation/token detail |
 
 > ⚠️ **These routes are not behind the OAuth layer.** They're mounted before the
 > auth middleware in `src/index.ts`, so anyone who can reach the server over the
@@ -150,8 +150,8 @@ your machine — see [Privacy & data separation](#privacy--data-separation).
 
 Edit `src/constants.ts`:
 - `FS_ALLOWED_PATHS` — directories you want Claude's filesystem tools to access
-- `CLAUDE_USAGE_DIR` — where the dashboard's Claude-usage JSONL logs live (only needed if you use that page)
-- `CLAUDE_LIMITS` — your daily/weekly token caps shown on that page
+- `CLAUDE_USAGE_DIR` — where the dashboard's Cowork usage JSONL logs live (Claude Code's own logs are read directly from `~/.claude/projects/`)
+- `CLAUDE_LIMITS` / `COWORK_LIMITS` — floors for the dashboard's rate-limit bars. Anthropic doesn't publish exact Claude Code token quotas, so these are only a starting point — the dashboard raises the effective limit automatically once it has enough usage history (see `src/services/claudeData.ts`)
 
 ### 4. Create the database
 
@@ -314,6 +314,7 @@ See [`docs/adding-features-quick.md`](docs/adding-features-quick.md) for the exa
 
 | Version | Notes |
 |---|---|
+| 1.3.0 | Rebuilt `/dashboard/claude` as a full multi-page Claude Analytics app (Overview, Projects, Sessions, Costs) covering Claude Code + Cowork; new Cowork usage-log format (per-session + daily-index files, with a migration script) replacing the old per-date files; fixed the headline token count counting repeatedly-recounted `cache_read` tokens as new usage; rate-limit bars now self-calibrate from your own usage history instead of a fixed guess; responsive/overflow fixes so charts fit at 100% zoom on desktop through mobile |
 | 1.2.0 | Claude usage dashboard (`/dashboard/claude`); futuristic glass restyle across all dashboard pages; fixed a topics-table bug that silently merged same-named topics across different sections; security hardening — pre-commit hook blocking secrets/data, git history audit, gitignore hardening, `data/real-backup/` snapshot + restore scripts, `seed:dev` for fake dev data, `docs/privacy.md` |
 | 1.1.0 | Rebuilt the dashboard as a bundled React app with an OS-hub home page and a study-progress tracker |
 | 1.0.0 | Initial release — Obsidian vault, SQLite, filesystem, OAuth 2.1 over Tailscale |

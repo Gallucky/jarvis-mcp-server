@@ -16,8 +16,24 @@ export const FS_ALLOWED_PATHS = [
 // Claude usage JSONL logs, read directly by the /api/claude-usage dashboard endpoint.
 export const CLAUDE_USAGE_DIR = "C:/Gal's Obsidian Vault/_AI-SPACE/claude-usage";
 
-// CHANGE THESE when Anthropic updates rate limits.
+// Anthropic does not publish exact Claude Code token quotas — the real
+// limit is an opaque "active compute hours" budget (Pro = 1x baseline,
+// Max 5x/20x) that varies by model and conversation complexity, not a
+// fixed token count. These are only a *floor* for installs with little
+// usage history; src/services/claudeData.ts raises the effective limit
+// dynamically once there's enough history (1.25x the heaviest day/week
+// actually seen), so the dashboard's rate-limit bars self-calibrate
+// instead of relying solely on this guess. Bump these if real usage
+// keeps reading near/over 100% on a Pro plan with no throttling.
 export const CLAUDE_LIMITS = {
-    daily: { tokens: 1_000_000, label: "יומי" },
-    weekly: { tokens: 5_000_000, label: "שבועי" },
+    daily: { tokens: 2_000_000, label: "יומי" },
+    weekly: { tokens: 10_000_000, label: "שבועי" },
+};
+
+// Estimates — update to match your actual Cowork plan. The Claude Analytics
+// dashboard's rate-limit bars compare a Cowork session's cum_tokens against these.
+export const COWORK_LIMITS = {
+    session5h: { tokens: 88_000, label: "5-hour session" },
+    daily: { tokens: 200_000, label: "daily" },
+    weekly: { tokens: 1_000_000, label: "weekly" },
 };

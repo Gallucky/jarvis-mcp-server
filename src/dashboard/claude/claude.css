@@ -1,294 +1,484 @@
 @import '../shared/shared.css';
 
-/* Progress groups (daily / weekly) */
-.progress-group { margin-bottom: 1rem; }
-
-.progress-bar-wrap {
-  position: relative;
-  margin-bottom: 0.9rem;
+:root {
+  --claude-bg: #0d1117;
+  --claude-surface: #161b22;
+  --claude-surface-hover: #21262d;
+  --claude-border: rgba(255, 255, 255, 0.1);
+  --claude-text: #e6edf3;
+  --claude-text-muted: #7d8590;
+  --claude-accent-orange: #f78166;
+  --claude-accent-blue: #58a6ff;
+  --claude-accent-green: #3fb950;
+  --claude-sonnet: #58a6ff;
+  --claude-opus: #bc8cff;
+  --claude-haiku: #3fb950;
+  --claude-cowork: #f0883e;
 }
-.progress-bar-wrap:last-of-type { margin-bottom: 0.6rem; }
 
-.progress-bar-head {
+/* This page overrides the shared violet/RTL body — it's its own bundle, so
+   nothing else is affected. */
+html, body {
+  background: var(--claude-bg);
+  background-image: none;
+  color: var(--claude-text);
+  padding: 0;
+  /* Belt-and-suspenders: a long session title or a wide grid row should
+     never be able to push the page wider than the viewport and force a
+     horizontal scrollbar/zoom-out. Everything below also fixes the actual
+     sources (min-width:0, minmax(0,1fr)) — this just guarantees the floor. */
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Thin, dark scrollbar for the whole app (Firefox) — Chromium/WebKit gets
+   the ::-webkit-scrollbar rules further down. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
+
+.claude-app {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 4px;
-  font-size: 0.85rem;
-}
-.progress-bar-label { font-weight: 600; }
-.progress-bar-meta { color: var(--muted); font-size: 0.78rem; }
-
-.progress-bar-track {
-  height: 8px;
-  background: rgba(255, 255, 255, 0.07);
-  border-radius: 4px;
-  overflow: hidden;
-}
-.progress-bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease, background 0.3s ease; }
-
-.progress-group-reset {
-  color: var(--muted);
-  font-size: 0.78rem;
-  text-align: center;
-  margin-top: 4px;
+  align-items: flex-start;
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 100vw;
 }
 
-/* Token unit suffix — "~1.0k" big, "tokens" small */
-.token-unit {
-  font-size: 0.7em;
-  font-weight: 400;
-  color: var(--muted);
-  vertical-align: baseline;
-  margin-inline-start: 3px;
-}
+/* ---------------------------------------------------------------- sidebar */
 
-/* Cursor-following tooltip, rendered via portal to document.body so it's
-   never clipped by an ancestor card's overflow:hidden/backdrop-filter. */
-.cursor-tooltip {
-  position: fixed;
-  z-index: 1000;
-  pointer-events: none;
-  min-width: 170px;
-  background: rgba(10, 11, 20, 0.94);
-  backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 8px 10px;
-  font-size: 0.75rem;
-  color: var(--text);
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.7);
-}
-
-/* Stats row */
-.stats-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 1rem; }
-
-.stat-card {
-  position: relative;
-  background:
-    linear-gradient(165deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02) 45%, rgba(255, 255, 255, 0.015)),
-    var(--card-bg);
-  backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
-  border: 1px solid var(--border);
-  border-top-color: rgba(255, 255, 255, 0.18);
-  border-radius: var(--radius);
-  padding: 0.9rem 1.1rem;
-  flex: 1;
-  min-width: 150px;
-  overflow: hidden;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 40px -22px rgba(0, 0, 0, 0.65);
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-}
-.stat-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 20% -12%, rgba(255, 255, 255, 0.16), transparent 55%);
-  pointer-events: none;
-}
-.stat-card:hover {
-  border-color: var(--border-hover);
-  transform: translateY(-2px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 24px 48px -22px rgba(0, 0, 0, 0.75), 0 0 28px -10px var(--accent);
-}
-.stat-card-label {
-  position: relative;
-  color: var(--muted);
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  margin-bottom: 6px;
-}
-.stat-card-value { position: relative; font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
-.stat-card-sub { position: relative; color: var(--muted); font-size: 0.75rem; margin-top: 4px; }
-
-/* Session filters — stacked rows: preset ranges, custom from/to, sources + sort */
-.session-filters {
+/* height must be set (not just top:0) for sticky to have a box to stick
+   within. 100vh is a fallback for engines without dvh support — the dvh
+   line right after overrides it where available, so the sidebar tracks the
+   *actual* visible viewport (mobile browser chrome showing/hiding) instead
+   of vh's load-time snapshot. */
+.claude-sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  background: var(--claude-surface);
+  border-right: 1px solid var(--claude-border);
+  padding: 1rem 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 0.9rem;
-}
-.session-filters-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.daterange-row {
-  padding-top: 8px;
-  border-top: 1px dashed var(--border);
-}
-.daterange-label { font-size: 0.75rem; color: var(--muted); }
-.daterange-input {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 4px 8px;
-  font-size: 0.78rem;
-  font-family: inherit;
-  color-scheme: dark;
-}
-.daterange-input:hover { border-color: var(--border-hover); }
-.daterange-clear {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  width: 22px;
-  height: 22px;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 0.7rem;
-  line-height: 1;
-}
-.daterange-clear:hover { border-color: #E53E3E; color: #E53E3E; }
-
-.filter-chip {
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--muted);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 4px 12px;
-  font-size: 0.75rem;
-  font-family: inherit;
-  cursor: pointer;
-  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
-}
-.filter-chip:hover { border-color: var(--border-hover); color: var(--text); }
-.filter-chip.active {
-  background: rgba(139, 123, 255, 0.14);
-  border-color: var(--accent);
-  color: var(--text);
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
 }
 
-/* Custom dropdown — replaces native <select> so the open menu matches the
-   app's glass styling (native option lists can't be restyled cross-browser). */
-.dropdown {
-  position: relative;
-  margin-inline-start: auto;
+.claude-sidebar-home {
+  color: var(--claude-text-muted);
+  text-decoration: none;
+  font-size: 0.8rem;
 }
-.dropdown-trigger {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 4px 10px;
-  font-size: 0.78rem;
-  font-family: inherit;
-  cursor: pointer;
-  transition: border-color 0.2s ease;
+.claude-sidebar-home:hover { color: var(--claude-accent-blue); }
+
+.claude-sidebar-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--claude-text);
 }
-.dropdown-trigger:hover { border-color: var(--border-hover); }
-.dropdown-arrow { font-size: 0.65em; color: var(--muted); }
-.dropdown-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  inset-inline-end: 0;
-  min-width: 100%;
-  background: rgba(8, 9, 18, 0.97);
-  backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 4px;
+
+.claude-sidebar-nav {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  z-index: 10;
-  box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.7);
 }
-.dropdown-item {
+
+.claude-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   background: none;
   border: none;
-  color: var(--text);
-  text-align: start;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 0.78rem;
+  border-left: 2px solid transparent;
+  color: var(--claude-text-muted);
   font-family: inherit;
+  font-size: 0.88rem;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.claude-nav-item:hover { background: var(--claude-surface-hover); color: var(--claude-text); }
+.claude-nav-item.active {
+  background: rgba(255, 255, 255, 0.08);
+  border-left-color: var(--claude-accent-orange);
+  color: var(--claude-text);
+}
+.claude-nav-icon { font-size: 1rem; }
+
+/* ---------------------------------------------------------------- content */
+
+.claude-content {
+  flex: 1 1 auto;
+  /* The classic flexbox trap: without this, a flex child never shrinks
+     below its content's natural (min-content) width — one long session
+     title is enough to force the whole page wider than the viewport. */
+  min-width: 0;
+  width: 100%;
+  max-width: 1280px;
+  padding: 1.5rem 2rem 3rem;
+  box-sizing: border-box;
+}
+
+.claude-page-header { margin-bottom: 1.25rem; }
+.claude-page-header h1 { font-size: 1.4rem; font-weight: 700; margin: 0 0 4px 0; }
+.claude-page-sub { color: var(--claude-text-muted); font-size: 0.85rem; }
+
+.claude-back-link {
+  background: none;
+  border: none;
+  color: var(--claude-text-muted);
+  font-family: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 1rem;
+  display: inline-block;
+}
+.claude-back-link:hover { color: var(--claude-accent-blue); }
+
+.claude-loading, .claude-empty {
+  color: var(--claude-text-muted);
+  text-align: center;
+  padding: 2.5rem 0;
+  font-size: 0.9rem;
+}
+
+/* ---------------------------------------------------------------- stats */
+
+.claude-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 1.25rem;
+  max-width: 100%;
+}
+.claude-stat-grid-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+
+.claude-stat-card {
+  position: relative;
+  min-width: 0;
+  background: var(--claude-surface);
+  border: 1px solid var(--claude-border);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  overflow: hidden;
+}
+.claude-stat-icon { position: absolute; top: 0.8rem; right: 1rem; font-size: 1.1rem; opacity: 0.8; }
+.claude-stat-label { color: var(--claude-text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.claude-stat-value { font-size: 1.4rem; font-weight: 700; color: var(--claude-text); }
+.claude-stat-sub { color: var(--claude-text-muted); font-size: 0.75rem; margin-top: 4px; }
+
+/* ---------------------------------------------------------------- cards */
+
+.claude-card {
+  background: var(--claude-surface);
+  border: 1px solid var(--claude-border);
+  border-radius: 10px;
+  padding: 1.1rem 1.2rem;
+  margin-bottom: 1.1rem;
+}
+.claude-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; }
+.claude-card-title { font-size: 0.85rem; font-weight: 600; color: var(--claude-text); margin-bottom: 0.9rem; }
+.claude-card-header .claude-card-title { margin-bottom: 0; }
+
+.claude-grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.1rem;
+  max-width: 100%;
+}
+.claude-grid-2 .claude-card { margin-bottom: 0; min-width: 0; }
+
+.claude-grid-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 1.1rem;
+  max-width: 100%;
+}
+.claude-detail-side { display: flex; flex-direction: column; gap: 1.1rem; min-width: 0; }
+.claude-detail-side .claude-card { margin-bottom: 0; min-width: 0; }
+
+/* ---------------------------------------------------------------- toggles */
+
+.claude-toggle-group { display: flex; gap: 4px; background: var(--claude-bg); border-radius: 8px; padding: 3px; }
+.claude-toggle {
+  background: none;
+  border: none;
+  color: var(--claude-text-muted);
+  font-family: inherit;
+  font-size: 0.78rem;
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.claude-toggle:hover { color: var(--claude-text); }
+.claude-toggle.active { background: var(--claude-surface-hover); color: var(--claude-text); }
+
+/* ---------------------------------------------------------------- charts */
+
+/* Canvases size themselves in JS from their parent's measured width, but
+   this is the hard backstop: a canvas (or its wrapper) can never visually
+   exceed its container, no matter what the JS measured. */
+canvas { max-width: 100%; display: block; }
+.chart-legend { display: flex; gap: 16px; justify-content: center; margin-top: 10px; flex-wrap: wrap; max-width: 100%; }
+.chart-legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--claude-text-muted); }
+.chart-legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+
+.donut-chart-wrap { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; max-width: 100%; }
+.donut-chart-legend { flex: 1 1 160px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.donut-legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
+.donut-legend-label { flex: 1; min-width: 0; color: var(--claude-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.donut-legend-value { color: var(--claude-text-muted); white-space: nowrap; }
+.donut-legend-pct { color: var(--claude-text-muted); min-width: 3em; text-align: right; }
+
+.hbar-chart { display: flex; flex-direction: column; gap: 10px; max-width: 100%; }
+.hbar-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.hbar-label { font-size: 0.8rem; color: var(--claude-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hbar-track { height: 8px; background: var(--claude-bg); border-radius: 4px; overflow: hidden; }
+.hbar-fill { height: 100%; border-radius: 4px; }
+.hbar-value { font-size: 0.78rem; color: var(--claude-text-muted); min-width: 3.5em; text-align: right; }
+
+.heatmap-wrap { overflow-x: auto; }
+
+.claude-limit-caveat { color: var(--claude-text-muted); font-size: 0.72rem; margin-bottom: 0.9rem; line-height: 1.4; }
+.claude-limit-bar { margin-bottom: 0.9rem; }
+.claude-limit-bar:last-child { margin-bottom: 0; }
+.claude-limit-head { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 5px; }
+.claude-limit-sub { color: var(--claude-text-muted); font-size: 0.75rem; }
+.claude-limit-track { height: 7px; background: var(--claude-bg); border-radius: 4px; overflow: hidden; }
+.claude-limit-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+
+/* ---------------------------------------------------------------- projects */
+
+.claude-project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: 14px;
+  max-width: 100%;
+}
+.claude-project-card {
+  text-align: left;
+  min-width: 0;
+  background: var(--claude-surface);
+  border: 1px solid var(--claude-border);
+  border-radius: 10px;
+  padding: 1rem;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--claude-text);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.claude-project-card:hover { border-color: var(--claude-accent-blue); transform: translateY(-2px); }
+.claude-project-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; }
+.claude-project-path { color: var(--claude-text-muted); font-size: 0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 8px; }
+.claude-project-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.claude-project-stats {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--claude-text-muted);
+  margin-bottom: 8px;
+}
+.claude-project-stat-value { color: var(--claude-text); font-weight: 600; }
+.claude-project-footer { font-size: 0.72rem; color: var(--claude-text-muted); }
+
+.claude-chip {
+  display: inline-block;
+  font-size: 0.68rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 1px 8px;
   white-space: nowrap;
 }
-.dropdown-item:hover { background: rgba(255, 255, 255, 0.06); }
-.dropdown-item.active { background: rgba(139, 123, 255, 0.14); color: var(--accent); }
+.claude-chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; }
 
-/* Session list */
-.session-list { display: flex; flex-direction: column; gap: 6px; }
+/* ---------------------------------------------------------------- sessions */
 
-.session-row-wrap {
-  border-radius: 10px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.session-row {
-  width: 100%;
-  display: grid;
-  grid-template-columns: 90px 1fr auto auto auto;
-  align-items: center;
-  gap: 12px;
-  background: none;
-  border: none;
-  border-radius: 10px;
-  padding: 8px 10px;
-  color: inherit;
+.claude-session-filters { display: flex; gap: 12px; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+.claude-search-input {
+  flex: 1;
+  min-width: 200px;
+  background: var(--claude-surface);
+  border: 1px solid var(--claude-border);
+  border-radius: 8px;
+  padding: 7px 12px;
+  color: var(--claude-text);
   font-family: inherit;
   font-size: 0.85rem;
-  text-align: inherit;
-  cursor: pointer;
-  transition: background 0.2s ease;
 }
-.session-row:hover { background: rgba(255, 255, 255, 0.05); }
+.claude-search-input:focus { outline: none; border-color: var(--claude-accent-blue); }
 
-.session-date { color: var(--muted); font-size: 0.78rem; }
-.session-title {
+.claude-session-list { display: flex; flex-direction: column; gap: 4px; max-width: 100%; }
+/* Flexbox + wrap instead of a fixed-column grid — a long AI-generated
+   session title (or a narrow viewport) just wraps onto a second line
+   instead of forcing the row, and the whole page, wider than the screen. */
+.claude-session-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  color: var(--claude-text);
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.claude-session-row:hover { background: var(--claude-surface-hover); }
+.claude-session-project {
+  flex: 0 1 130px;
+  min-width: 0;
+  color: var(--claude-text-muted);
+  font-size: 0.78rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.session-chip {
-  font-size: 0.7rem;
-  border: 1px solid currentColor;
-  border-radius: 999px;
-  padding: 2px 9px;
+.claude-session-title {
+  flex: 1 1 160px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-.session-tokens { color: var(--text); font-size: 0.8rem; white-space: nowrap; }
-.session-cost { color: var(--muted); font-size: 0.8rem; white-space: nowrap; min-width: 4.5em; text-align: end; }
-
-.session-messages {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 4px 10px 10px 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-.session-message-row {
-  display: grid;
-  grid-template-columns: 50px 1fr auto;
-  gap: 10px;
-  font-size: 0.75rem;
-  color: var(--muted);
-  padding: 3px 0;
-}
-.session-message-index { color: var(--muted-2); }
-
-.session-empty {
-  text-align: center;
-  color: var(--muted);
-  padding: 2rem 0;
-  font-size: 0.85rem;
-}
+.claude-session-branch { flex: 0 0 auto; color: var(--claude-text-muted); font-size: 0.76rem; white-space: nowrap; }
+.claude-session-meta { flex: 0 0 auto; color: var(--claude-text-muted); font-size: 0.78rem; white-space: nowrap; }
+.claude-session-time { flex: 0 0 auto; color: var(--claude-text-muted); font-size: 0.76rem; white-space: nowrap; min-width: 5em; text-align: right; margin-left: auto; }
 
 @media (max-width: 700px) {
-  .session-row { grid-template-columns: 70px 1fr auto; }
-  .session-chip, .session-cost { display: none; }
+  .claude-session-project, .claude-session-branch { display: none; }
+  .claude-session-title { flex-basis: 100%; }
+  .claude-session-time { margin-left: 0; }
+}
+
+/* ---------------------------------------------------------------- session detail */
+
+.claude-conversation-card { display: flex; flex-direction: column; min-width: 0; }
+.claude-conversation {
+  max-height: 720px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 4px;
+}
+/* Styled scrollbar for the conversation pane (Chromium/WebKit). Firefox
+   picks up the thin/transparent rule set globally near the top of this file. */
+.claude-conversation::-webkit-scrollbar { width: 8px; }
+.claude-conversation::-webkit-scrollbar-track { background: transparent; }
+.claude-conversation::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+}
+.claude-conversation::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
+
+.claude-bubble { border-radius: 8px; padding: 10px 12px; max-width: 92%; }
+.claude-bubble-user { background: rgba(88, 166, 255, 0.1); align-self: flex-end; }
+.claude-bubble-assistant { background: var(--claude-bg); align-self: flex-start; }
+.claude-bubble-role { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--claude-text-muted); margin-bottom: 4px; }
+.claude-bubble-text { font-size: 0.85rem; white-space: pre-wrap; word-break: break-word; }
+.claude-bubble-tools { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.claude-tool-badge {
+  font-size: 0.7rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--claude-border);
+  border-radius: 5px;
+  padding: 2px 7px;
+  color: var(--claude-accent-blue);
+}
+
+.claude-kv-table { width: 100%; font-size: 0.85rem; }
+.claude-kv-table td { padding: 5px 0; }
+.claude-kv-table td:first-child { color: var(--claude-text-muted); }
+.claude-kv-table td:last-child { text-align: right; font-weight: 600; }
+
+.claude-tools-used { display: flex; flex-direction: column; gap: 8px; }
+.claude-tool-used-row { display: grid; grid-template-columns: 90px minmax(0, 1fr) 30px; align-items: center; gap: 8px; font-size: 0.8rem; }
+.claude-tool-used-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.claude-tool-used-count { text-align: right; color: var(--claude-text-muted); }
+
+/* ---------------------------------------------------------------- costs */
+
+.claude-cost-by-model { display: flex; flex-direction: column; gap: 12px; }
+.claude-cost-model-row { border-bottom: 1px solid var(--claude-border); padding-bottom: 10px; }
+.claude-cost-model-row:last-child { border-bottom: none; padding-bottom: 0; }
+.claude-cost-model-name { font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; }
+.claude-cost-model-meta { display: flex; gap: 12px; flex-wrap: wrap; color: var(--claude-text-muted); font-size: 0.74rem; margin-bottom: 4px; }
+.claude-cost-model-value { font-weight: 700; color: var(--claude-accent-orange); }
+
+/* Smaller laptops — same desktop shape, just tighter padding so the
+   200px sidebar + content don't add up past common 1280–1366px screens. */
+@media (max-width: 1280px) {
+  .claude-content { padding: 1.25rem 1.25rem 2.5rem; }
+}
+
+/* Tablet — sidebar collapses to an icon rail, multi-column grids drop to 2/3
+   columns or stack, so nothing needs a column-count wider than the screen. */
+@media (max-width: 1024px) {
+  .claude-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .claude-stat-grid-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .claude-grid-2, .claude-grid-detail { grid-template-columns: minmax(0, 1fr); }
+  .claude-sidebar { width: 64px; padding: 1rem 0.5rem; }
+  .claude-sidebar-home span, .claude-sidebar-title, .claude-nav-label { display: none; }
+  .claude-nav-item { justify-content: center; padding: 10px; }
+}
+
+/* Phone — sidebar becomes a horizontal top bar instead of a vertical rail
+   (a vertical icon rail eats a much bigger share of a ~375px-wide screen),
+   content padding shrinks, and grids go down to a single column. */
+@media (max-width: 640px) {
+  .claude-app { flex-direction: column; max-width: 100vw; }
+  .claude-sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    overflow-x: auto;
+    padding: 0.6rem 0.75rem;
+    gap: 0.75rem;
+    border-right: none;
+    border-bottom: 1px solid var(--claude-border);
+  }
+  .claude-sidebar-home { flex-shrink: 0; }
+  .claude-sidebar-home span { display: inline; }
+  .claude-sidebar-title { display: none; }
+  .claude-sidebar-nav { flex-direction: row; gap: 4px; flex-shrink: 0; }
+  .claude-nav-item {
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.65rem;
+    padding: 6px 12px;
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+  }
+  .claude-nav-item.active { border-left-color: transparent; border-bottom-color: var(--claude-accent-orange); }
+  .claude-nav-label { display: block; }
+
+  .claude-content { padding: 1rem 0.85rem 2rem; }
+  .claude-page-header h1 { font-size: 1.2rem; }
+  .claude-stat-grid, .claude-stat-grid-6 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .claude-stat-icon { display: none; }
+  .claude-project-grid { grid-template-columns: minmax(0, 1fr); }
+  .claude-conversation { max-height: 50vh; }
 }

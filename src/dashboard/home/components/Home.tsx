@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { HomeBlock } from './HomeBlock';
-import { CLAUDE_LIMITS } from '../../../constants';
+
+// Rough monthly cost ceiling used only to size the home-page ring — tweak freely.
+const CLAUDE_MONTHLY_COST_CEILING_USD = 500;
 
 const IDEA_BLOCKS = [
   { icon: '✅', name: 'משימות' },
@@ -22,10 +24,10 @@ export function Home() {
       })
       .catch(() => {});
 
-    fetch('/api/claude-usage?days=7')
+    fetch('/api/claude/overview')
       .then(r => r.json())
       .then(data => {
-        setClaudePct(Math.round(data.totals.all.tokens / CLAUDE_LIMITS.weekly.tokens * 100));
+        setClaudePct(Math.min(100, Math.round((data.estimatedCostUSD / CLAUDE_MONTHLY_COST_CEILING_USD) * 100)));
       })
       .catch(() => {});
   }, []);
