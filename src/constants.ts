@@ -6,11 +6,19 @@ export const MAX_SEARCH_LIMIT = 100;
 // Change this if your vault uses a different path.
 export const DISTILLATION_FOLDER = "_AI-SPACE/Distillations";
 
+// Claude Code's own memory folder for this project -- vault_memory_* tools
+// read/write here to keep it in sync with the vault's "about me" notes.
+export const MEMORY_DIR = "C:/Users/admin/.claude/projects/c--jarvis-mcp-server/memory";
+
+// Vault notes treated as the source of truth for vault_memory_* tools.
+export const VAULT_MEMORY_NOTE_PATHS = ["ME.md", "05 Meta/Claude.Reports.md"];
+
 // CHANGE THESE to the directories you want Claude to have filesystem access to.
 // All fs_* tool calls are blocked outside these paths.
 export const FS_ALLOWED_PATHS = [
     "C:/Gal's Obsidian Vault",
     "C:/jarvis-mcp-server",
+    MEMORY_DIR,
 ];
 
 // Claude usage JSONL logs, read directly by the /api/claude-usage dashboard endpoint.

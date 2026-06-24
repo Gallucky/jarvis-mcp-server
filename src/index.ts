@@ -9,27 +9,20 @@
  */
 
 import "dotenv/config";
-import crypto from "crypto";
 import express from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { mcpAuthRouter } from "@modelcontextprotocol/sdk/server/auth/router.js";
 import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
-import type { OAuthServerProvider } from "@modelcontextprotocol/sdk/server/auth/provider.js";
-import type { OAuthRegisteredClientsStore } from "@modelcontextprotocol/sdk/server/auth/clients.js";
-import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
-import type {
-  OAuthClientInformationFull,
-  OAuthTokens,
-} from "@modelcontextprotocol/sdk/shared/auth.js";
-import type { Response } from "express";
 
 import { ObsidianClient } from "./services/obsidianClient.js";
+import { makeOAuthProvider, registerAuthorizeApproveRoute } from "./services/oauthProvider.js";
 import { registerVaultTools } from "./tools/vault.js";
 import { registerJarvisTools } from "./tools/jarvis.js";
 import { registerSqliteTools } from "./tools/sqlite.js";
 import { registerFilesystemTools } from "./tools/filesystem.js";
+import { registerVaultMemorySyncTools } from "./tools/vaultMemorySync.js";
 import { readFileSync } from "fs";
 import { dirname, join } from "path/win32";
 import { fileURLToPath } from "url";
@@ -39,25 +32,6 @@ import { dashboardRouter } from "./routes/dashboard.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(join(__dirname, "../package.json"), "utf-8")) as { version: string };
-
-// ---------------------------------------------------------------------------
-// In-memory OAuth stores (personal server -- resets on restart, fine)
-// ---------------------------------------------------------------------------
-interface StoredCode {
-  clientId: string;
-  redirectUri: string;
-  codeChallenge: string;
-  expiresAt: number;
-}
-interface StoredToken {
-  clientId: string;
-  scopes: string[];
-  expiresAt: number;
-}
-
-const clients = new Map<string, OAuthClientInformationFull>();
-const codes = new Map<string, StoredCode>();
-const tokens = new Map<string, StoredToken>();
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -75,6 +49,7 @@ function buildServer(obsidian: ObsidianClient): McpServer {
   registerSqliteTools(server);
   registerFilesystemTools(server);
   registerStudyTools(server, db);
+  registerVaultMemorySyncTools(server, obsidian);
   return server;
 }
 
@@ -85,148 +60,66 @@ async function runStdio(obsidian: ObsidianClient): Promise<void> {
   console.error("jarvis-mcp-server running via stdio");
 }
 
-// ---------------------------------------------------------------------------
-// OAuth provider -- auto-approves everything (Tailscale is the real gate)
-// ---------------------------------------------------------------------------
-function makeProvider(): OAuthServerProvider {
-  const staticId = process.env["OAUTH_CLIENT_ID"];
-  const staticSecret = process.env["OAUTH_CLIENT_SECRET"];
-  if (staticId && staticSecret) {
-    clients.set(staticId, {
-      client_id: staticId,
-      client_secret: staticSecret,
-      client_id_issued_at: Math.floor(Date.now() / 1000),
-      redirect_uris: ["https://claude.ai/api/mcp/auth_callback"],
-      grant_types: ["authorization_code"],
-      response_types: ["code"],
-      token_endpoint_auth_method: "client_secret_post",
-    });
-    console.error(`OAuth: static client pre-registered (${staticId})`);
-  }
-
-  const clientsStore: OAuthRegisteredClientsStore = {
-    getClient(clientId: string) {
-      return clients.get(clientId);
-    },
-    registerClient(info) {
-      const clientId = crypto.randomBytes(16).toString("hex");
-      const clientSecret = crypto.randomBytes(32).toString("hex");
-      const full: OAuthClientInformationFull = {
-        ...info,
-        client_id: clientId,
-        client_secret: clientSecret,
-        client_id_issued_at: Math.floor(Date.now() / 1000),
-      };
-      clients.set(clientId, full);
-      console.error(`OAuth: dynamic client registered (${clientId})`);
-      return full;
-    },
+function logRequests(label: string) {
+  return (req: express.Request, _res: express.Response, next: express.NextFunction) => {
+    console.error(`[${label}] ${req.method} ${req.path}`);
+    next();
   };
-
-  const provider: OAuthServerProvider = {
-    get clientsStore() {
-      return clientsStore;
-    },
-
-    async authorize(
-      _client: OAuthClientInformationFull,
-      params: { state?: string; codeChallenge: string; redirectUri: string },
-      res: Response
-    ) {
-      const code = crypto.randomBytes(16).toString("hex");
-      codes.set(code, {
-        clientId: _client.client_id,
-        redirectUri: params.redirectUri,
-        codeChallenge: params.codeChallenge,
-        expiresAt: Date.now() + 5 * 60 * 1000,
-      });
-      const dest = new URL(params.redirectUri);
-      dest.searchParams.set("code", code);
-      if (params.state) dest.searchParams.set("state", params.state);
-      console.error(`OAuth: authorizing client ${_client.client_id}, redirecting to ${dest.toString()}`);
-      res.redirect(dest.toString());
-    },
-
-    async challengeForAuthorizationCode(
-      _client: OAuthClientInformationFull,
-      authorizationCode: string
-    ) {
-      const record = codes.get(authorizationCode);
-      if (!record || record.expiresAt < Date.now()) {
-        throw new Error("Invalid or expired code");
-      }
-      return record.codeChallenge;
-    },
-
-    async exchangeAuthorizationCode(
-      _client: OAuthClientInformationFull,
-      authorizationCode: string
-    ): Promise<OAuthTokens> {
-      const record = codes.get(authorizationCode);
-      if (!record || record.expiresAt < Date.now()) {
-        throw new Error("Invalid or expired code");
-      }
-      codes.delete(authorizationCode);
-
-      const accessToken = crypto.randomBytes(32).toString("hex");
-      const ONE_YEAR = 365 * 24 * 60 * 60;
-      tokens.set(accessToken, {
-        clientId: record.clientId,
-        scopes: [],
-        expiresAt: Math.floor(Date.now() / 1000) + ONE_YEAR,
-      });
-      console.error(`OAuth: token issued for client ${record.clientId}`);
-      return { access_token: accessToken, token_type: "Bearer", expires_in: ONE_YEAR };
-    },
-
-    async exchangeRefreshToken(): Promise<OAuthTokens> {
-      throw new Error("Refresh tokens not supported");
-    },
-
-    async verifyAccessToken(token: string): Promise<AuthInfo> {
-      const record = tokens.get(token);
-      if (!record) throw new Error("Invalid token");
-      if (record.expiresAt < Math.floor(Date.now() / 1000)) throw new Error("Token expired");
-      return {
-        token,
-        clientId: record.clientId,
-        scopes: record.scopes,
-        expiresAt: record.expiresAt,
-      };
-    },
-  };
-
-  return provider;
 }
 
-async function runHTTP(obsidian: ObsidianClient): Promise<void> {
-  const port = parseInt(process.env.PORT ?? "3700", 10);
-  const baseUrl = new URL(
-    (process.env.PUBLIC_BASE_URL ?? `http://localhost:${port}`).replace(/\/$/, "")
-  );
+// Claude's web client calls /mcp cross-origin, so it preflights with OPTIONS --
+// requireBearerAuth has no CORS awareness and would 401 a preflight (which never
+// carries an Authorization header), so the browser blocks the real request before
+// OAuth even gets a chance to run. Short-circuit OPTIONS here, ahead of auth.
+function allowCrossOriginMcpClients(req: express.Request, res: express.Response, next: express.NextFunction): void {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "*");
+  // Reflect whatever headers this specific preflight asked for, instead of a
+  // hardcoded list -- avoids silently blocking a client that sends a header
+  // we didn't anticipate (e.g. a protocol-version header).
+  const requestedHeaders = req.header("Access-Control-Request-Headers");
+  res.header("Access-Control-Allow-Headers", requestedHeaders ?? "*");
+  res.header("Access-Control-Expose-Headers", "*");
+  if (req.method === "OPTIONS") {
+    res.sendStatus(204);
+    return;
+  }
+  next();
+}
 
-  const provider = makeProvider();
-
-  const app = express();
-  app.set("trust proxy", 1); // for Tailscale HTTPS reverse proxy
-
-  // Log all incoming requests for debugging
-  app.use((req, _res, next) => {
-    console.error(`${req.method} ${req.path}`);
-    next();
-  });
-
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
-  app.use(dashboardRouter);
-
-  // serve favicon + the dashboard's bundled JS so Claude's connector UI shows an icon
+function mountStaticAssets(app: express.Express): void {
   app.get("/favicon.ico", (_req, res) => {
     res.setHeader("Content-Type", "image/svg+xml");
     res.send(readFileSync(join(__dirname, "../public/favicon.svg")));
   });
   app.use(express.static(join(__dirname, "../public")));
+}
 
+/**
+ * MCP/OAuth gets its own port so it alone can be exposed via Tailscale Funnel
+ * (internet-reachable, gated by the password prompt in oauthProvider.ts).
+ * The dashboard runs on a separate port kept on plain Tailscale Serve
+ * (tailnet-only, no password needed -- see runDashboard).
+ */
+async function runMcp(obsidian: ObsidianClient): Promise<void> {
+  requireEnv("AUTH_APPROVAL_PASSWORD");
+  const port = parseInt(process.env.PORT ?? "3701", 10);
+  const baseUrl = new URL(
+    (process.env.PUBLIC_BASE_URL ?? `http://localhost:${port}`).replace(/\/$/, "")
+  );
+
+  const provider = makeOAuthProvider();
+
+  const app = express();
+  app.set("trust proxy", 1); // for Tailscale HTTPS reverse proxy
+  app.use(logRequests("mcp"));
+  app.use(allowCrossOriginMcpClients);
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+  registerAuthorizeApproveRoute(app);
+
+  // favicon so Claude's connector UI shows an icon
+  mountStaticAssets(app);
 
   // SDK OAuth router (sets up /.well-known/*, /register, /authorize, /token)
   app.use(mcpAuthRouter({ provider, issuerUrl: baseUrl }));
@@ -254,9 +147,23 @@ async function runHTTP(obsidian: ObsidianClient): Promise<void> {
   });
 
   app.listen(port, "127.0.0.1", () => {
-    console.error(`jarvis-mcp-server listening on http://127.0.0.1:${port}/mcp`);
+    console.error(`jarvis-mcp-server (MCP) listening on http://127.0.0.1:${port}/mcp`);
     console.error(`OAuth issuer: ${baseUrl.toString()}`);
     console.error(`Resource metadata: ${resourceMetadataUrl}`);
+  });
+}
+
+function runDashboard(): void {
+  const port = parseInt(process.env.DASHBOARD_PORT ?? "3700", 10);
+
+  const app = express();
+  app.set("trust proxy", 1);
+  app.use(logRequests("dashboard"));
+  app.use(dashboardRouter);
+  mountStaticAssets(app);
+
+  app.listen(port, "127.0.0.1", () => {
+    console.error(`jarvis-mcp-server (dashboard) listening on http://127.0.0.1:${port}/dashboard`);
   });
 }
 
@@ -276,7 +183,8 @@ async function main(): Promise<void> {
 
   const transport = process.env.TRANSPORT ?? "stdio";
   if (transport === "http") {
-    await runHTTP(obsidian);
+    await runMcp(obsidian);
+    runDashboard();
   } else {
     await runStdio(obsidian);
   }
