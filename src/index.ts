@@ -29,7 +29,7 @@ import { dirname, join } from "path/win32";
 import { fileURLToPath } from "url";
 import db from "./services/db.js";
 import { registerStudyTools } from "./tools/study/psychometric.js";
-import { dashboardRouter } from "./routes/dashboard.js";
+import dashboardRouter from "./routes/dashboard.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(join(__dirname, "../package.json"), "utf-8")) as { version: string };

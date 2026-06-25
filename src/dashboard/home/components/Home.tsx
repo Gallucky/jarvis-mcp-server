@@ -13,6 +13,7 @@ const IDEA_BLOCKS = [
 export function Home() {
   const [studyPct, setStudyPct] = useState(0);
   const [claudePct, setClaudePct] = useState(0);
+  const [taskPct, setTaskPct] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     fetch('/api/stats')
@@ -29,6 +30,16 @@ export function Home() {
         setClaudePct(Math.min(100, Math.round((data.estimatedCostUSD / CLAUDE_MONTHLY_COST_CEILING_USD) * 100)));
       })
       .catch(() => {});
+
+    fetch('/api/tasks')
+      .then(r => r.json())
+      .then((tasks: Array<{ status: string }>) => {
+        const active = tasks.filter(t => t.status !== 'Archived');
+        if (!active.length) { setTaskPct(0); return; }
+        const done = active.filter(t => t.status === 'Completed').length;
+        setTaskPct(Math.round(done / active.length * 100));
+      })
+      .catch(() => {});
   }, []);
 
   return (
@@ -43,7 +54,7 @@ export function Home() {
       <div className="home-grid">
         <HomeBlock icon="📚" name="לימודים" href="/dashboard/study" pct={studyPct} />
         <HomeBlock icon="🤖" name="Claude" href="/dashboard/claude" pct={claudePct} />
-        <HomeBlock icon="✅" name="משימות" href="/dashboard/task" />
+        <HomeBlock icon="✅" name="משימות" href="/dashboard/task" pct={taskPct} />
         {IDEA_BLOCKS.map(b => (
           <HomeBlock key={b.name} icon={b.icon} name={b.name} />
         ))}
