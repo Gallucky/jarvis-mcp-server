@@ -5,7 +5,6 @@ import { HomeBlock } from './HomeBlock';
 const CLAUDE_MONTHLY_COST_CEILING_USD = 500;
 
 const IDEA_BLOCKS = [
-  { icon: '✅', name: 'משימות' },
   { icon: '💰', name: 'כספים' },
   { icon: '🔁', name: 'הרגלים' },
   { icon: '📅', name: 'יומן' },
@@ -44,6 +43,7 @@ export function Home() {
       <div className="home-grid">
         <HomeBlock icon="📚" name="לימודים" href="/dashboard/study" pct={studyPct} />
         <HomeBlock icon="🤖" name="Claude" href="/dashboard/claude" pct={claudePct} />
+        <HomeBlock icon="✅" name="משימות" href="/dashboard/task" />
         {IDEA_BLOCKS.map(b => (
           <HomeBlock key={b.name} icon={b.icon} name={b.name} />
         ))}

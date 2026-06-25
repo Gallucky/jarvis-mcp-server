@@ -17,6 +17,9 @@ public/study.css
 public/claude.js
 public/claude.js.map
 public/claude.css
+public/task.js
+public/task.js.map
+public/task.css
 
 # Database and local data files
 data/*.db

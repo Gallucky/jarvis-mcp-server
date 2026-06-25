@@ -88,6 +88,7 @@ export function Study() {
   const pct = overall.total ? Math.round(overall.done / overall.total * 100) : 0;
 
   return (
+    <div className="study-viewport">
     <div className="dashboard">
 
       {/* Header */}
@@ -182,6 +183,7 @@ export function Study() {
           })}
         </div>
       </Card>
+    </div>
     </div>
   );
 }

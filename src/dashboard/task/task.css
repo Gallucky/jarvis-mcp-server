@@ -1,0 +1,12 @@
+@import '../shared/shared.css';
+
+body {
+  padding: 0;
+}
+
+.task-center {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

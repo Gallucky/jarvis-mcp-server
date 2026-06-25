@@ -1,5 +1,45 @@
 @import '../shared/shared.css';
 
+/* body's min-height:100vh plus its own padding can push total page height
+   just past the viewport, forcing a scrollbar even when content alone
+   fits — move the padding onto .dashboard instead (mirrors claude.css). */
+body {
+  padding: 0;
+}
+
+.study-viewport {
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.dashboard {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(10px, 2.5vh, 32px) clamp(14px, 3vw, 32px);
+  gap: clamp(8px, 1.6vh, 18px);
+}
+
+/* Laptop/desktop: fluid clamp()s above already shrink padding/gaps/fonts as
+   height drops, so the page fits one screen without scrolling. */
+@media (min-width: 768px) {
+  .study-viewport {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+}
+
+/* Phones: a tall stack of cards genuinely doesn't fit one screen, so let it
+   scroll naturally instead of squeezing fonts/spacing down to nothing. */
+@media (max-width: 767px) {
+  .study-viewport {
+    align-items: flex-start;
+  }
+}
+
 .refresh-btn {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: var(--blur);
@@ -13,19 +53,22 @@
   font-family: inherit;
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
 }
+
 .refresh-btn:hover {
   background: rgba(255, 255, 255, 0.09);
   border-color: var(--accent);
   box-shadow: 0 0 24px -6px var(--accent);
 }
-.refresh-btn:active { transform: scale(0.96); }
+
+.refresh-btn:active {
+  transform: scale(0.96);
+}
 
 /* Stat row */
 .stats-row {
   display: flex;
-  gap: 12px;
+  gap: clamp(8px, 1.5vh, 12px);
   flex-wrap: wrap;
-  margin-bottom: 1rem;
 }
 
 .stat-card {
@@ -45,6 +88,7 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 40px -22px rgba(0, 0, 0, 0.65);
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
+
 .stat-card::before {
   content: '';
   position: absolute;
@@ -52,11 +96,13 @@
   background: radial-gradient(circle at 20% -12%, rgba(255, 255, 255, 0.16), transparent 55%);
   pointer-events: none;
 }
+
 .stat-card:hover {
   border-color: var(--border-hover);
   transform: translateY(-2px);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 24px 48px -22px rgba(0, 0, 0, 0.75), 0 0 28px -10px var(--accent);
 }
+
 .stat-card-label {
   color: var(--muted);
   font-size: 0.7rem;
@@ -64,7 +110,13 @@
   letter-spacing: 0.6px;
   margin-bottom: 6px;
 }
-.stat-card-value { position: relative; font-size: 1.7rem; font-weight: 700; line-height: 1; }
+
+.stat-card-value {
+  position: relative;
+  font-size: clamp(1.15rem, 2.4vh, 1.7rem);
+  font-weight: 700;
+  line-height: 1;
+}
 
 .ring-card {
   position: relative;
@@ -84,6 +136,7 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 40px -22px rgba(0, 0, 0, 0.65);
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
+
 .ring-card::before {
   content: '';
   position: absolute;
@@ -91,55 +144,100 @@
   background: radial-gradient(circle at 20% -12%, rgba(255, 255, 255, 0.16), transparent 55%);
   pointer-events: none;
 }
-.ring-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
-.ring-card:hover .ring-chart { transform: scale(1.06); }
+
+.ring-card:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-2px);
+}
+
+.ring-card:hover .ring-chart {
+  transform: scale(1.06);
+}
 
 /* Section grid */
 .grid-section {
   display: grid;
   grid-template-columns: 1fr 1.5fr;
-  gap: 14px;
-  margin-bottom: 1rem;
+  gap: clamp(8px, 1.5vh, 14px);
+  flex: 1;
+  min-height: 0;
 }
+
 @media (max-width: 860px) {
-  .grid-section { grid-template-columns: 1fr; }
+  .grid-section {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Section progress bars */
-.progress-row { margin-bottom: 0.7rem; }
-.progress-row:last-child { margin-bottom: 0; }
+.progress-row {
+  margin-bottom: 0.7rem;
+}
+
+.progress-row:last-child {
+  margin-bottom: 0;
+}
+
 .progress-row-head {
   display: flex;
   justify-content: space-between;
   margin-bottom: 4px;
 }
-.progress-row-meta { color: var(--muted); font-size: 0.78rem; }
+
+.progress-row-meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .progress-track {
   height: 6px;
   background: rgba(255, 255, 255, 0.07);
   border-radius: 3px;
   overflow: hidden;
 }
-.progress-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
 
 /* Topics table — scrollable body, sticky head so headers stay visible across sections */
 .topics-table-scroll {
-  max-height: 300px;
+  max-height: clamp(140px, 28vh, 300px);
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
-.topics-table-scroll::-webkit-scrollbar { width: 6px; }
-.topics-table-scroll::-webkit-scrollbar-track { background: transparent; }
+
+.topics-table-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.topics-table-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 .topics-table-scroll::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.18);
   border-radius: 3px;
 }
-.topics-table-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.32); }
 
-.topics-table { width: 100%; border-collapse: collapse; }
-.topics-table thead tr { color: var(--muted-2); font-size: 0.78rem; }
+.topics-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.topics-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.topics-table thead tr {
+  color: var(--muted-2);
+  font-size: 0.78rem;
+}
+
 .topics-table th {
   position: sticky;
   top: 0;
@@ -150,23 +248,46 @@
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
 }
-.topics-table tbody tr { border-top: 1px solid rgba(255, 255, 255, 0.06); transition: background 0.2s ease; }
-.topics-table tbody tr:hover { background: rgba(255, 255, 255, 0.05); }
-.topics-table td { padding: 7px 0; }
+
+.topics-table tbody tr {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  transition: background 0.2s ease;
+}
+
+.topics-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.topics-table td {
+  padding: 7px 0;
+}
+
 .topic-name {
   max-width: clamp(110px, 18vw, 220px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.topic-section { color: var(--muted); font-size: 0.78rem; padding-inline-start: 8px; }
+
+.topic-section {
+  color: var(--muted);
+  font-size: 0.78rem;
+  padding-inline-start: 8px;
+}
+
 .topic-remaining {
   display: flex;
   align-items: center;
   gap: 10px;
   padding-inline-start: 8px;
 }
-.topic-remaining-count { font-weight: 600; min-width: 1.4em; text-align: left; }
+
+.topic-remaining-count {
+  font-weight: 600;
+  min-width: 1.4em;
+  text-align: left;
+}
+
 .topic-remaining-track {
   flex: 1;
   min-width: 36px;
@@ -175,6 +296,7 @@
   border-radius: 2px;
   overflow: hidden;
 }
+
 .topic-remaining-fill {
   height: 100%;
   background: var(--accent);
@@ -183,22 +305,34 @@
   transition: width 0.4s ease;
 }
 
-/* Lessons */
-.lessons-row { display: flex; gap: 10px; flex-wrap: wrap; }
+/* Lessons — kept compact on purpose so the two cards above (grid-section,
+   which has flex:1) get the leftover height on desktop's fixed-height page. */
+.lessons-row {
+  display: flex;
+  gap: clamp(4px, 0.8vh, 10px);
+  flex-wrap: wrap;
+}
+
 .lesson-chip {
   display: block;
   text-align: center;
-  min-width: 44px;
+  min-width: 40px;
   color: inherit;
   text-decoration: none;
   border-radius: 10px;
-  padding: 4px;
+  padding: clamp(2px, 0.4vh, 4px);
   transition: background 0.2s ease, transform 0.15s ease;
 }
-.lesson-chip[href]:hover { background: rgba(255, 255, 255, 0.06); transform: translateY(-2px); cursor: pointer; }
+
+.lesson-chip[href]:hover {
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-2px);
+  cursor: pointer;
+}
+
 .lesson-bar {
-  height: 56px;
-  width: 32px;
+  height: clamp(22px, 4vh, 40px);
+  width: 28px;
   margin: 0 auto;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -208,10 +342,20 @@
   flex-direction: column;
   justify-content: flex-end;
 }
+
 .lesson-bar-fill {
   background: linear-gradient(180deg, var(--accent-2), var(--accent));
   box-shadow: 0 0 10px -2px var(--accent);
   transition: height 0.4s ease;
 }
-.lesson-number { color: var(--muted); font-size: 0.7rem; margin-top: 4px; }
-.lesson-pct { font-size: 0.7rem; color: #9094ab; }
+
+.lesson-number {
+  color: var(--muted);
+  font-size: 0.7rem;
+  margin-top: 4px;
+}
+
+.lesson-pct {
+  font-size: 0.7rem;
+  color: #9094ab;
+}

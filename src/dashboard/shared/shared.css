@@ -34,7 +34,13 @@
   --blur: blur(20px) saturate(160%);
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 html {
   font-size: clamp(15px, 0.6vw + 12px, 18px);
@@ -76,7 +82,12 @@ body {
   color: var(--accent);
   text-shadow: 0 0 22px rgba(139, 123, 255, 0.45);
 }
-.header-sync { color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
+
+.header-sync {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
 
 .back-link {
   display: inline-block;
@@ -86,7 +97,10 @@ body {
   margin-bottom: 4px;
   transition: color 0.2s ease;
 }
-.back-link:hover { color: var(--accent-2); }
+
+.back-link:hover {
+  color: var(--accent-2);
+}
 
 /* Generic card — frosted glass: blurred backdrop, top-edge sheen, soft outer glow on hover */
 .card {
@@ -104,6 +118,7 @@ body {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 40px -22px rgba(0, 0, 0, 0.65);
   transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
 }
+
 .card::before {
   content: '';
   position: absolute;
@@ -111,11 +126,13 @@ body {
   background: radial-gradient(circle at 18% -12%, rgba(255, 255, 255, 0.16), transparent 55%);
   pointer-events: none;
 }
+
 .card:hover {
   border-color: var(--border-hover);
   transform: translateY(-2px);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 24px 48px -22px rgba(0, 0, 0, 0.75), 0 0 32px -10px var(--accent);
 }
+
 .card-title {
   position: relative;
   color: var(--accent-2);
@@ -127,5 +144,10 @@ body {
 }
 
 /* Ring chart */
-.ring-chart { transition: transform 0.2s ease; }
-.ring-chart-progress { transition: stroke-dashoffset 0.5s ease; }
+.ring-chart {
+  transition: transform 0.2s ease;
+}
+
+.ring-chart-progress {
+  transition: stroke-dashoffset 0.5s ease;
+}

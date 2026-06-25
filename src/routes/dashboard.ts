@@ -51,6 +51,12 @@ dashboardRouter.get("/dashboard/study", (_req, res) => {
     res.send(htmlShell("Study Dashboard", "study"));
 });
 
+// Tasks dashboard
+dashboardRouter.get("/dashboard/task", (_req, res) => {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(htmlShell("Tasks", "task"));
+});
+
 // Claude Analytics dashboard (English, LTR — sub-page of the Jarvis hub)
 dashboardRouter.get("/dashboard/claude", (_req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");

@@ -23,6 +23,7 @@ import { registerJarvisTools } from "./tools/jarvis.js";
 import { registerSqliteTools } from "./tools/sqlite.js";
 import { registerFilesystemTools } from "./tools/filesystem.js";
 import { registerVaultMemorySyncTools } from "./tools/vaultMemorySync.js";
+import { registerObsidianSkillTools } from "./tools/obsidian.js";
 import { readFileSync } from "fs";
 import { dirname, join } from "path/win32";
 import { fileURLToPath } from "url";
@@ -50,6 +51,7 @@ function buildServer(obsidian: ObsidianClient): McpServer {
   registerFilesystemTools(server);
   registerStudyTools(server, db);
   registerVaultMemorySyncTools(server, obsidian);
+  registerObsidianSkillTools(server);
   return server;
 }
 
