@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Searchbar from "./Searchbar";
 
 type TasksScreenHeaderProps = {
     adding: boolean;
@@ -23,6 +24,7 @@ const TasksScreenHeader = (props: TasksScreenHeaderProps): React.ReactNode => {
                 <div className="header-title">✅ משימות</div>
                 <div className="header-sync">עדכון: {lastSync}</div>
             </div>
+            <Searchbar />
             <div className="task-header-actions">
                 <button className="refresh-btn" onClick={load}>⟳ רענן</button>
                 <button className="add-btn" onClick={openAdd}>+ משימה</button>
