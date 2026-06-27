@@ -7,12 +7,8 @@ import AddTaskForm from './AddTaskForm';
 import { STATUS_COLOR, PRIORITY_COLOR, STATUSES } from '../constants';
 import TasksList from './TasksList';
 
-
-
-
-
 // TODO:
-// 0. Re-order the tasks screen area.
+// 0. Re-order the tasks screen area. ✓
 // 1. Re-Add the date picker dialog.
 // 2. Style the dropdown dialog.
 // 3. A custom pop up for deletion confirmation.

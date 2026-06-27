@@ -1,4 +1,4 @@
-import { STATUS_COLOR, PRIORITY_COLOR, STATUSES } from "../constants";
+import { STATUS_COLOR, PRIORITY_COLOR, PRIORITY_LABEL, STATUSES } from "../constants";
 import { Task } from "../types";
 
 type TasksList = {
@@ -25,7 +25,7 @@ const TasksList = (props: TasksList) => {
                             {task.area && <span className="task-badge task-area">{task.area}</span>}
                             <span className="task-badge task-priority"
                                 style={{ color: PRIORITY_COLOR[task.priority], borderColor: PRIORITY_COLOR[task.priority] }}>
-                                {task.priority}
+                                {PRIORITY_LABEL[task.priority]}
                             </span>
                         </div>
                         <div className="task-card-right">

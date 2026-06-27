@@ -6,6 +6,12 @@ export const STATUSES: Task['status'][] = [
 
 export const PRIORITIES: Task['priority'][] = ['Low', 'Medium', 'High'];
 
+export const PRIORITY_LABEL: Record<Task['priority'], string> = {
+    'Low': '🟢 Low',
+    'Medium': '🟡 Medium',
+    'High': '🔴 High',
+};
+
 export const STATUS_COLOR: Record<Task['status'], string> = {
     'Not Started': '#767c92',
     'WIP': '#8b7bff',
