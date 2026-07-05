@@ -45,3 +45,14 @@ export const COWORK_LIMITS = {
     daily: { tokens: 200_000, label: "daily" },
     weekly: { tokens: 1_000_000, label: "weekly" },
 };
+
+// Discord webhook notifications, used by scheduled tasks (weekly planners,
+// daily digests, etc.) to post an update without each one needing its own
+// copy-pasted PowerShell script. One generic script is reused across every
+// webhook -- see src/tools/discord.ts. Hardcoded here (not routed through
+// FS_ALLOWED_PATHS/fs_* tools) because this is a dedicated Jarvis convention,
+// not generic filesystem access.
+export const DISCORD_HOME_SERVER_DIR = "C:/Users/admin/Documents/Discord/Home Server";
+export const DISCORD_SCRIPTS_DIR = `${DISCORD_HOME_SERVER_DIR}/scripts`;
+export const DISCORD_WEBHOOKS_DIR = `${DISCORD_HOME_SERVER_DIR}/webhooks`;
+export const DISCORD_SEND_SCRIPT_NAME = "Send-DiscordWebhook.ps1";

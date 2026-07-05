@@ -9,7 +9,9 @@ type AddTaskFormProps = {
     setAdding: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
-const WEEKDAYS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
+type TaskFormErrors = Partial<Record<'title' | 'submit', string>>;
+
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 const toIsoDate = (date: Date): string => {
     const year = date.getFullYear();
@@ -45,6 +47,8 @@ const AddTaskForm = (props: AddTaskFormProps) => {
     const [priorityOpen, setPriorityOpen] = useState(false);
     const [dateOpen, setDateOpen] = useState(false);
     const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+    const [errors, setErrors] = useState<TaskFormErrors>({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const priorityRef = useRef<HTMLDivElement>(null);
     const dateRef = useRef<HTMLDivElement>(null);
@@ -80,25 +84,73 @@ const AddTaskForm = (props: AddTaskFormProps) => {
     ];
 
 
+    const clearError = (field: keyof TaskFormErrors) => {
+        setErrors(prev => {
+            if (!prev[field]) return prev;
+
+            const next = { ...prev };
+            delete next[field];
+            return next;
+        });
+    };
+
     const addTask = async () => {
-        if (!newTitle.trim()) return;
+        if (isSubmitting) return;
+
+        const title = newTitle.trim();
+
+        if (!title) {
+            setErrors(prev => ({ ...prev, title: 'Title is required.' }));
+            titleRef.current?.classList.add("title-error");
+            titleRef.current?.focus();
+            return;
+        }
+
+        titleRef.current?.classList.remove("title-error");
+        setErrors({});
+        setIsSubmitting(true);
+
         const body: Partial<Task> & { title: string } = {
-            title: newTitle.trim(),
+            title,
             priority: newPriority,
             status: 'Not Started',
             ...(newArea.trim() && { area: newArea.trim() }),
             ...(newDue.trim() && { due_date: newDue.trim() }),
             ...(newDesc.trim() && { description: newDesc.trim() }),
         };
-        const created: Task = await fetch('/api/tasks', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-        }).then(r => r.json());
-        setTasks(prev => [created, ...prev]);
-        setNewTitle(''); setNewPriority('Medium'); setNewArea('');
-        setNewDue(''); setNewDesc('');
-        setAdding(false);
+
+        try {
+            const response = await fetch('/api/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+
+            if (!response.ok) {
+                let message = 'Could not add task.';
+
+                try {
+                    const errorBody = await response.json();
+                    if (typeof errorBody?.message === 'string') message = errorBody.message;
+                    if (typeof errorBody?.error === 'string') message = errorBody.error;
+                } catch {
+                    message = response.statusText || message;
+                }
+
+                throw new Error(message);
+            }
+
+            const created: Task = await response.json();
+            setTasks(prev => [created, ...prev]);
+            setNewTitle(''); setNewPriority('Medium'); setNewArea('');
+            setNewDue(''); setNewDesc('');
+            setAdding(false);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Could not add task.';
+            setErrors(prev => ({ ...prev, submit: message }));
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const openDatePicker = () => {
@@ -116,14 +168,40 @@ const AddTaskForm = (props: AddTaskFormProps) => {
     return <>
         <div className="card task-add-form">
             <div className="task-add-row">
-                <input
-                    ref={titleRef}
-                    className="task-input task-input-title"
-                    placeholder="כותרת משימה..."
-                    value={newTitle}
-                    onChange={e => setNewTitle(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') addTask(); if (e.key === 'Escape') setAdding(false); }}
-                />
+                <div style={{ flex: 2, minWidth: 180, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <input
+                        ref={titleRef}
+                        className="task-input task-input-title"
+                        placeholder="כותרת משימה..."
+                        value={newTitle}
+                        aria-invalid={Boolean(errors.title)}
+                        aria-describedby={errors.title ? 'task-title-error' : undefined}
+                        style={errors.title ? { borderColor: '#ff6b6b' } : undefined}
+                        onChange={e => {
+                            setNewTitle(e.target.value);
+                            titleRef.current?.classList.remove("title-error");
+                            clearError('title');
+                            clearError('submit');
+                        }}
+                        onKeyDown={e => { if (e.key === 'Enter') addTask(); if (e.key === 'Escape') setAdding(false); }}
+                    />
+                    {errors.title && (
+                        <span
+                            id="task-title-error"
+                            role="alert"
+                            className="task-field-error"
+                            style={{ color: '#ff6b6b', fontSize: '0.75rem', lineHeight: 1.2 }}
+                        >
+                            {errors.title}
+                        </span>
+                    )}
+                </div>
+
+                {/* Area of task */}
+                <input className="task-input" placeholder="אזור (לימודים, עבודה...)"
+                    value={newArea} onChange={e => setNewArea(e.target.value)} />
+
+                {/* Priority Picker */}
                 <div className="task-priority-picker" ref={priorityRef}>
                     <button
                         className="task-priority-trigger"
@@ -163,8 +241,8 @@ const AddTaskForm = (props: AddTaskFormProps) => {
                         </div>
                     )}
                 </div>
-                <input className="task-input" placeholder="אזור (לימודים, עבודה...)"
-                    value={newArea} onChange={e => setNewArea(e.target.value)} />
+
+                {/* Date Picker */}
                 <div className="task-date-picker" ref={dateRef}>
                     <button
                         className={`task-date-trigger ${newDue ? '' : 'task-date-trigger-empty'}`}
@@ -238,10 +316,22 @@ const AddTaskForm = (props: AddTaskFormProps) => {
                     )}
                 </div>
             </div>
+            {/* Task's Description */}
             <input className="task-input task-input-desc" placeholder="תיאור (אופציונלי)..."
                 value={newDesc} onChange={e => setNewDesc(e.target.value)} />
             <div className="task-add-actions">
-                <button className="add-btn" onClick={addTask}>הוסף</button>
+                {errors.submit && (
+                    <span
+                        role="alert"
+                        className="task-submit-error"
+                        style={{ color: '#ff6b6b', fontSize: '0.8rem', alignSelf: 'center' }}
+                    >
+                        {errors.submit}
+                    </span>
+                )}
+                <button className="add-btn" onClick={addTask} disabled={isSubmitting}>
+                    {isSubmitting ? 'Adding...' : 'הוסף'}
+                </button>
                 <button className="cancel-btn" onClick={() => setAdding(false)}>ביטול</button>
             </div>
         </div>

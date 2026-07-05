@@ -24,12 +24,14 @@ import { registerSqliteTools } from "./tools/sqlite.js";
 import { registerFilesystemTools } from "./tools/filesystem.js";
 import { registerVaultMemorySyncTools } from "./tools/vaultMemorySync.js";
 import { registerObsidianSkillTools } from "./tools/obsidian.js";
+import { registerDiscordTools } from "./tools/discord.js";
 import { readFileSync } from "fs";
 import { dirname, join } from "path/win32";
 import { fileURLToPath } from "url";
 import db from "./services/db.js";
 import { registerStudyTools } from "./tools/study/psychometric.js";
 import dashboardRouter from "./routes/dashboard.js";
+import { vaultIndex } from "./services/vaultIndex.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(join(__dirname, "../package.json"), "utf-8")) as { version: string };
@@ -45,13 +47,14 @@ function requireEnv(name: string): string {
 
 function buildServer(obsidian: ObsidianClient): McpServer {
   const server = new McpServer({ name: "jarvis-mcp-server", version: pkg.version });
-  registerVaultTools(server, obsidian);
+  registerVaultTools(server);
   registerJarvisTools(server, obsidian);
   registerSqliteTools(server);
   registerFilesystemTools(server);
   registerStudyTools(server, db);
   registerVaultMemorySyncTools(server, obsidian);
   registerObsidianSkillTools(server);
+  registerDiscordTools(server);
   return server;
 }
 
@@ -173,6 +176,8 @@ async function main(): Promise<void> {
   const obsidianBaseUrl = requireEnv("OBSIDIAN_API_BASE_URL");
   const obsidianApiKey = requireEnv("OBSIDIAN_API_KEY");
   const obsidian = new ObsidianClient(obsidianBaseUrl, obsidianApiKey);
+
+  vaultIndex.init();
 
   const reachable = await obsidian.ping();
   if (!reachable) {
