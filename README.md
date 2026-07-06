@@ -7,7 +7,7 @@
 **A personal MCP server for your Obsidian vault, SQLite database, and filesystem —
 accessible from any Claude client, anywhere.**
 
-[![Version](https://img.shields.io/badge/version-1.8.0-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-1.8.1-blue.svg)](package.json)
 [![MCP](https://img.shields.io/badge/protocol-MCP-8A2BE2)](https://modelcontextprotocol.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Node](https://img.shields.io/badge/Node.js-≥18-339933?logo=node.js&logoColor=white)](https://nodejs.org)
@@ -394,6 +394,14 @@ See [`docs/adding-features-quick.md`](docs/adding-features-quick.md) for the exa
 
 | Version | Notes |
 |---|---|
+| 1.8.1 | Filled in version history from 1.3.1 through 1.8.0 (this table) |
+| 1.8.0 | Hardened `fs_*` tools' path safety checks; simplified the PM2 install/resurrect ops scripts |
+| 1.7.0 | Replaced Obsidian REST API vault access with a local file index; added Discord notification tool; task form control/searchbar styling fixes |
+| 1.6.2 | Added Tasks CRUD backend with dashboard routes split by domain; split `TasksScreen` into modular components; responsive layout fixes for the task header/searchbar and dashboard edge padding |
+| 1.5.0 | Added a Tasks dashboard page and Obsidian skill tools |
+| 1.4.0 | Split the MCP and dashboard into separate servers; fixed web CORS; added `vault_memory_sync` tools |
+| 1.3.2 | Refactored the `claudeData` service into per-concern modules |
+| 1.3.1 | Wired up the study sync indicator and capped background polling |
 | 1.3.0 | Rebuilt `/dashboard/claude` as a full multi-page Claude Analytics app (Overview, Projects, Sessions, Costs) covering Claude Code + Cowork; new Cowork usage-log format (per-session + daily-index files, with a migration script) replacing the old per-date files; fixed the headline token count counting repeatedly-recounted `cache_read` tokens as new usage; rate-limit bars now self-calibrate from your own usage history instead of a fixed guess; responsive/overflow fixes so charts fit at 100% zoom on desktop through mobile |
 | 1.2.0 | Claude usage dashboard (`/dashboard/claude`); futuristic glass restyle across all dashboard pages; fixed a topics-table bug that silently merged same-named topics across different sections; security hardening — pre-commit hook blocking secrets/data, git history audit, gitignore hardening, `data/real-backup/` snapshot + restore scripts, `seed:dev` for fake dev data, `docs/privacy.md` |
 | 1.1.0 | Rebuilt the dashboard as a bundled React app with an OS-hub home page and a study-progress tracker |
