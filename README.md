@@ -86,7 +86,8 @@ Tailscale Funnel/Serve  ──►  jarvis-mcp-server :3701
 
 > **Security:** All filesystem operations are restricted to directories listed in
 > `FS_ALLOWED_PATHS` in `src/constants.ts`. Paths outside this allowlist are
-> rejected before any I/O runs.
+> rejected before any I/O runs — and `.env`/`.git` are denied even inside an allowed
+> directory (see `src/utils/pathSafety.ts`).
 
 ---
 
@@ -214,39 +215,59 @@ approving it.
 
 ### 7. Run (production)
 
-```bash
+This repo includes `pm2-start.bat` — a one-time setup script. Run it once, and again any
+time you've reinstalled or uninstalled PM2:
+
+```bat
+:: installation run once / run after uninstalling.
+
 npm install -g pm2
+cd C:\jarvis-mcp-server
 pm2 start dist/index.js --name jarvis-mcp
 pm2 save
 ```
 
 [PM2](https://pm2.keymetrics.io/) is a process manager for Node.js. It keeps your server
 running in the background without a terminal window open, automatically restarts it if it
-crashes, and lets you check its status at any time with `pm2 status`.
+crashes, and lets you check its status at any time with `pm2 status`. The final `pm2 save`
+step matters more than it looks — it's what lets `pm2 resurrect` (below) restore the process
+after a reboot. Without it, resurrect has nothing to restore.
 
 > **Why not just `npm start`?**
 > Running `npm start` directly ties the server to your terminal session — close the window
 > and the server dies. PM2 runs it as a background daemon that survives terminal closures.
 
-#### ⚙️ Optional: Auto-start on Windows boot
+#### ⚙️ Auto-start on Windows boot
 
-By default PM2 itself doesn't survive a reboot on Windows. To fix that, this repo includes
-`pm2-start.bat` — a one-line script that tells PM2 to restore your saved process list:
+By default PM2 itself doesn't survive a reboot on Windows. This repo includes a second,
+separate one-line script for that — `pm2-resurrect.bat`:
 
 ```bat
 pm2 resurrect
 ```
 
-To make the server start automatically every time Windows boots:
+To make the server start automatically every time you log into Windows:
 
-1. Press `Win + R`, type `taskschd.msc`, press Enter
-2. Click **Create Basic Task**
-3. **Name:** `jarvis-mcp-server` (or anything you like)
-4. **Trigger:** When the computer starts
-5. **Action:** Start a program → browse to `pm2-start.bat` in this repo
-6. Finish
+1. Press `Win + R`, type `shell:startup`, press Enter — this opens your Startup folder
+2. Create a shortcut to `pm2-resurrect.bat` inside that folder (right-click the file →
+   Create shortcut, then move the shortcut into the Startup folder)
 
-Now the server comes back online automatically after every reboot — no manual intervention needed.
+Now the server comes back online automatically every time you log in — no manual
+intervention needed, as long as the `pm2 save` from step 7 is up to date.
+
+> **Why two separate scripts?** `pm2-start.bat` does a full `pm2 start` + `pm2 save` — you
+> only run it once, or after PM2 itself has been reinstalled/removed. `pm2-resurrect.bat`
+> just restores whatever was already saved — it's meant to run unattended, every boot, via
+> the shortcut above.
+
+> **Note:** `shell:startup` only fires on an interactive login, not on a fully unattended
+> reboot (e.g. an overnight Windows Update restart where nobody logs in). A Windows-Service
+> approach like [pm2-installer](https://github.com/jessety/pm2-installer) can cover that gap,
+> but trades this simplicity for its own gotchas (service-account file permissions on this
+> project's folders, a less reliable built-in auto-resurrect in practice, and npm global
+> config that's easy to leave half-reverted if you ever switch back). For a machine you log
+> into regularly, `shell:startup` + `pm2-resurrect.bat` is the simpler, more predictable
+> choice.
 
 ### 8. Connect Claude
 
@@ -258,6 +279,62 @@ Use `OAUTH_CLIENT_ID` and `OAUTH_CLIENT_SECRET` from your `.env` when prompted.
 > Since this server runs on a Tailscale domain (`*.ts.net`) that Google can't reach,
 > the connector will show a generic placeholder icon. This is cosmetic only — everything
 > works normally. A custom icon would require pointing a public domain at your server.
+
+---
+
+## Updating
+
+This repo includes `restart-server.ps1` — a small PowerShell script that rebuilds and
+restarts the server in one step:
+
+```powershell
+cd C:\jarvis-mcp-server
+npm run build
+pm2 restart jarvis-mcp
+pm2 save
+```
+
+Full routine flow for deploying a code change:
+
+```bash
+cd C:\jarvis-mcp-server
+git pull
+npm install          # only strictly needed if package.json changed
+.\restart-server.ps1  # build + restart + save, in one step
+pm2 list              # confirm status: online, fresh uptime
+```
+
+> **PowerShell execution policy:** if double-clicking `restart-server.ps1` opens it in a
+> text editor instead of running it, or you get a "running scripts is disabled" error,
+> either right-click → **Run with PowerShell**, or set the policy once:
+> `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+
+Neither `pm2-start.bat` nor `pm2-resurrect.bat` need to change for a routine update — they
+handle first-time install and boot-time resurrect respectively, not deploying new code.
+`restart-server.ps1` deliberately doesn't do `git pull`/`npm install` — those are only
+needed sometimes (pulling remote changes, or after adding a dependency) — run them first
+when relevant, then let the script handle the build/restart/save every time.
+
+**Always let `pm2 save` run after `pm2 restart`** (the script does this for you). PM2 does
+not persist the running process list on its own — if the machine reboots after a restart
+but before a save, `pm2 resurrect` restores the *last saved* version, which may not include
+your update, or in the worst case nothing at all.
+
+> ### ⚠️ Required last step: reconnect Claude
+> OAuth clients and tokens in this server are held in memory by design (see the comment at
+> the top of `src/services/oauthProvider.ts`), not persisted to disk — so **every** restart,
+> including a routine update via `restart-server.ps1`, invalidates Claude's existing
+> connection. After running the script (or any `pm2 restart`), always:
+> 1. Confirm the server actually came back: `pm2 list` shows `jarvis-mcp` `online`.
+> 2. In Claude → **Settings → Connectors**, reconnect this connector.
+> 3. Verify with a quick tool call (e.g. `fs_list_dir` or `jarvis_search_vault`) before
+>    considering the update done.
+>
+> Persisting the OAuth store to disk would remove this step entirely; as of this writing
+> it hasn't been built yet — see [Development](#development) if you want to tackle it.
+
+See [Run (production)](#7-run-production) above for the one-time install, and
+[Auto-start on Windows boot](#️-auto-start-on-windows-boot) for what happens after a reboot.
 
 ---
 
@@ -276,6 +353,9 @@ Full details in [`docs/privacy.md`](docs/privacy.md). Summary:
   SQLite directly (not raw file copies, which can corrupt a database that's open elsewhere).
 - **Only your Obsidian vault syncs across devices** (via SyncThing or similar) — this
   server and its database do not; they live permanently on whichever machine you deploy to.
+- **Filesystem tools deny `.env`/`.git` explicitly** (`src/utils/pathSafety.ts`), even though
+  the project root is itself in `FS_ALLOWED_PATHS` — without that, `fs_read_file` could read
+  every secret in `.env` in one call.
 
 ---
 
