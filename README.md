@@ -7,7 +7,7 @@
 **A personal MCP server for your Obsidian vault, SQLite database, and filesystem —
 accessible from any Claude client, anywhere.**
 
-[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-1.8.0-blue.svg)](package.json)
 [![MCP](https://img.shields.io/badge/protocol-MCP-8A2BE2)](https://modelcontextprotocol.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Node](https://img.shields.io/badge/Node.js-≥18-339933?logo=node.js&logoColor=white)](https://nodejs.org)
