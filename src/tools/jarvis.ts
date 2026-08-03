@@ -7,6 +7,16 @@ import {
   type CreateDistillationInput,
 } from "../schemas/jarvis.js";
 
+// ─── shared logic — called by both the MCP tool below and the REST facade ───
+
+export async function createDistillation(obsidian: ObsidianClient, title: string, content: string): Promise<{ path: string }> {
+  const stamp = formatTimestamp(new Date());
+  const safeTitle = sanitizeFilename(title);
+  const path = `${DISTILLATION_FOLDER}/${stamp} - ${safeTitle}.md`;
+  await obsidian.writeNote(path, content);
+  return { path };
+}
+
 /**
  * Tools that encode YOUR specific Jarvis conventions, not just generic
  * Obsidian CRUD. Add more here as your workflow grows -- this file is the
@@ -42,11 +52,7 @@ Examples:
     },
     async (params: CreateDistillationInput) => {
       try {
-        const stamp = formatTimestamp(new Date());
-        const safeTitle = sanitizeFilename(params.title);
-        const path = `${DISTILLATION_FOLDER}/${stamp} - ${safeTitle}.md`;
-
-        await obsidian.writeNote(path, params.content);
+        const { path } = await createDistillation(obsidian, params.title, params.content);
         return {
           content: [{ type: "text", text: `Saved distillation to '${path}'.` }],
         };

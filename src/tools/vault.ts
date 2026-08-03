@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { readFileSync, writeFileSync, appendFileSync, existsSync, readdirSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { CHARACTER_LIMIT } from "../constants.js";
-import { vaultIndex } from "../services/vaultIndex.js";
+import { vaultIndex, type FtsResult } from "../services/vaultIndex.js";
 import {
   ReadNoteInputSchema,
   type ReadNoteInput,
@@ -21,6 +21,50 @@ const VAULT_PATH = "C:/Gal's Obsidian Vault";
 function vaultPath(notePath: string): string {
   return join(VAULT_PATH, notePath);
 }
+
+// ─── shared logic — called by both the MCP tools below and the REST facade ──
+
+export function readNote(path: string): { found: false } | { found: true; content: string; truncated: boolean } {
+  const abs = vaultPath(path);
+  if (!existsSync(abs)) return { found: false };
+  let text = readFileSync(abs, "utf-8");
+  const truncated = text.length > CHARACTER_LIMIT;
+  if (truncated) {
+    text = text.slice(0, CHARACTER_LIMIT) +
+      `\n\n[Truncated: note is ${text.length} characters, showing first ${CHARACTER_LIMIT}.]`;
+  }
+  return { found: true, content: text, truncated };
+}
+
+export function createNote(path: string, content: string, overwrite: boolean): { created: true } | { created: false; reason: string } {
+  const abs = vaultPath(path);
+  if (!overwrite && existsSync(abs)) {
+    return { created: false, reason: `A note already exists at '${path}'. Pass overwrite=true to replace it, or append instead.` };
+  }
+  mkdirSync(dirname(abs), { recursive: true });
+  writeFileSync(abs, content, "utf-8");
+  return { created: true };
+}
+
+export function appendNote(path: string, content: string): void {
+  const abs = vaultPath(path);
+  mkdirSync(dirname(abs), { recursive: true });
+  appendFileSync(abs, `\n${content}`, "utf-8");
+}
+
+export function listNotes(folder: string): { entries: string[] } {
+  const abs = vaultPath(folder ?? "");
+  if (!existsSync(abs)) return { entries: [] };
+  const entries = readdirSync(abs, { withFileTypes: true });
+  return { entries: entries.map((e) => (e.isDirectory() ? `${e.name}/` : e.name)) };
+}
+
+export function searchVault(query: string, limit: number): { ready: false } | { ready: true; results: FtsResult[] } {
+  if (!vaultIndex.isReady()) return { ready: false };
+  return { ready: true, results: vaultIndex.search(query, limit) };
+}
+
+// ─── MCP tool registration — thin wrappers formatting the above for Claude ──
 
 export function registerVaultTools(server: McpServer): void {
   server.registerTool(
@@ -43,17 +87,10 @@ Examples:
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     (params: ReadNoteInput) => {
-      const abs = vaultPath(params.path);
-      if (!existsSync(abs)) {
-        return { content: [{ type: "text", text: `No note found at '${params.path}'.` }] };
-      }
       try {
-        let text = readFileSync(abs, "utf-8");
-        if (text.length > CHARACTER_LIMIT) {
-          text = text.slice(0, CHARACTER_LIMIT) +
-            `\n\n[Truncated: note is ${text.length} characters, showing first ${CHARACTER_LIMIT}.]`;
-        }
-        return { content: [{ type: "text", text }] };
+        const result = readNote(params.path);
+        if (!result.found) return { content: [{ type: "text", text: `No note found at '${params.path}'.` }] };
+        return { content: [{ type: "text", text: result.content }] };
       } catch (e) {
         return { isError: true, content: [{ type: "text", text: `Error reading file: ${e instanceof Error ? e.message : String(e)}` }] };
       }
@@ -85,16 +122,9 @@ Examples:
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
     (params: CreateNoteInput) => {
-      const abs = vaultPath(params.path);
-      if (!params.overwrite && existsSync(abs)) {
-        return {
-          isError: true,
-          content: [{ type: "text", text: `Error: A note already exists at '${params.path}'. Pass overwrite=true to replace it, or use jarvis_append_note to add to it instead.` }],
-        };
-      }
       try {
-        mkdirSync(dirname(abs), { recursive: true });
-        writeFileSync(abs, params.content, "utf-8");
+        const result = createNote(params.path, params.content, params.overwrite);
+        if (!result.created) return { isError: true, content: [{ type: "text", text: `Error: ${result.reason}` }] };
         return { content: [{ type: "text", text: `Created note at '${params.path}'.` }] };
       } catch (e) {
         return { isError: true, content: [{ type: "text", text: `Error writing file: ${e instanceof Error ? e.message : String(e)}` }] };
@@ -123,10 +153,8 @@ Examples:
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
     (params: AppendNoteInput) => {
-      const abs = vaultPath(params.path);
       try {
-        mkdirSync(dirname(abs), { recursive: true });
-        appendFileSync(abs, `\n${params.content}`, "utf-8");
+        appendNote(params.path, params.content);
         return { content: [{ type: "text", text: `Appended to '${params.path}'.` }] };
       } catch (e) {
         return { isError: true, content: [{ type: "text", text: `Error appending to file: ${e instanceof Error ? e.message : String(e)}` }] };
@@ -154,21 +182,15 @@ Examples:
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     (params: ListNotesInput) => {
-      const abs = vaultPath(params.folder ?? "");
-      if (!existsSync(abs)) {
-        return { content: [{ type: "text", text: `'${params.folder || "/"}' is empty or doesn't exist.` }] };
-      }
       try {
-        const entries = readdirSync(abs, { withFileTypes: true });
-        const files = entries.map((e) => e.isDirectory() ? `${e.name}/` : e.name);
-        if (files.length === 0) {
+        const { entries } = listNotes(params.folder ?? "");
+        if (entries.length === 0) {
           return { content: [{ type: "text", text: `'${params.folder || "/"}' is empty or doesn't exist.` }] };
         }
         const folder = params.folder || "/";
-        const output = { folder, count: files.length, entries: files };
         return {
-          content: [{ type: "text", text: `${folder} (${files.length} entries):\n` + files.map((f) => `- ${f}`).join("\n") }],
-          structuredContent: output,
+          content: [{ type: "text", text: `${folder} (${entries.length} entries):\n` + entries.map((f) => `- ${f}`).join("\n") }],
+          structuredContent: { folder, count: entries.length, entries },
         };
       } catch (e) {
         return { isError: true, content: [{ type: "text", text: `Error listing folder: ${e instanceof Error ? e.message : String(e)}` }] };
@@ -196,10 +218,11 @@ Examples:
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     (params: SearchVaultInput) => {
-      if (!vaultIndex.isReady()) {
+      const outcome = searchVault(params.query, params.limit);
+      if (!outcome.ready) {
         return { content: [{ type: "text", text: "Search index is still building — try again in a moment." }] };
       }
-      const results = vaultIndex.search(params.query, params.limit);
+      const { results } = outcome;
       if (results.length === 0) {
         return { content: [{ type: "text", text: `No notes found matching '${params.query}'.` }] };
       }

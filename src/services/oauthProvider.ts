@@ -4,9 +4,15 @@ import type { OAuthServerProvider, AuthorizationParams } from "@modelcontextprot
 import type { OAuthRegisteredClientsStore } from "@modelcontextprotocol/sdk/server/auth/clients.js";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import type { OAuthClientInformationFull, OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
+import { issueToken, verifyToken } from "./tokenStore.js";
 
 /**
- * In-memory OAuth stores -- personal server, resets on restart by design.
+ * Clients and in-flight authorization codes stay in-memory -- personal
+ * server, resets on restart by design, and codes are single-use/5-minute-lived
+ * anyway. Issued access tokens live in the DB-backed tokenStore instead (see
+ * ./tokenStore.ts), so they survive restarts and can be revoked per client
+ * label without affecting other callers.
+ *
  * The only thing that actually gates a stranger from getting a token is the
  * password prompt in /authorize-approve below, NOT network placement --
  * this server may be reachable from the public internet via Tailscale Funnel.
@@ -17,15 +23,9 @@ interface StoredCode {
   codeChallenge: string;
   expiresAt: number;
 }
-interface StoredToken {
-  clientId: string;
-  scopes: string[];
-  expiresAt: number;
-}
 
 const clients = new Map<string, OAuthClientInformationFull>();
 const codes = new Map<string, StoredCode>();
-const tokens = new Map<string, StoredToken>();
 
 export function makeOAuthProvider(): OAuthServerProvider {
   const staticId = process.env["OAUTH_CLIENT_ID"];
@@ -98,15 +98,10 @@ export function makeOAuthProvider(): OAuthServerProvider {
       }
       codes.delete(authorizationCode);
 
-      const accessToken = crypto.randomBytes(32).toString("hex");
       const ONE_YEAR = 365 * 24 * 60 * 60;
-      tokens.set(accessToken, {
-        clientId: record.clientId,
-        scopes: [],
-        expiresAt: Math.floor(Date.now() / 1000) + ONE_YEAR,
-      });
+      const { token: accessToken, expiresAt } = issueToken(record.clientId, ONE_YEAR);
       console.error(`OAuth: token issued for client ${record.clientId}`);
-      return { access_token: accessToken, token_type: "Bearer", expires_in: ONE_YEAR };
+      return { access_token: accessToken, token_type: "Bearer", expires_in: expiresAt - Math.floor(Date.now() / 1000) };
     },
 
     async exchangeRefreshToken(): Promise<OAuthTokens> {
@@ -114,13 +109,12 @@ export function makeOAuthProvider(): OAuthServerProvider {
     },
 
     async verifyAccessToken(token: string): Promise<AuthInfo> {
-      const record = tokens.get(token);
-      if (!record) throw new Error("Invalid token");
-      if (record.expiresAt < Math.floor(Date.now() / 1000)) throw new Error("Token expired");
+      const record = verifyToken(token);
+      if (!record) throw new Error("Invalid or expired token");
       return {
         token,
-        clientId: record.clientId,
-        scopes: record.scopes,
+        clientId: record.clientLabel,
+        scopes: [],
         expiresAt: record.expiresAt,
       };
     },

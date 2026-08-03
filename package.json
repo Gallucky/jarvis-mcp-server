@@ -1,6 +1,6 @@
 {
   "name": "jarvis-mcp-server",
-  "version": "1.8.1",
+  "version": "1.9.0",
   "description": "Custom MCP server wrapping the Obsidian Local REST API, with Jarvis-specific workflow tools, for remote access from any Claude client.",
   "type": "module",
   "main": "dist/index.js",
@@ -17,12 +17,17 @@
     "seed:dev": "tsx src/scripts/seed.ts",
     "migrate:claude-usage": "tsx src/scripts/migrateClaudeUsage.ts",
     "db:backup-real": "tsx src/scripts/dbBackupReal.ts",
-    "db:restore-real": "tsx src/scripts/dbRestoreReal.ts"
+    "db:restore-real": "tsx src/scripts/dbRestoreReal.ts",
+    "mint-token": "tsx src/scripts/mintApiToken.ts",
+    "revoke-token": "tsx src/scripts/revokeApiToken.ts",
+    "list-tokens": "tsx src/scripts/listApiTokens.ts",
+    "gemini-chat": "tsx src/scripts/gemini/chat.ts"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
+    "@google/genai": "^2.15.0",
     "@modelcontextprotocol/sdk": "^1.6.1",
     "axios": "^1.7.9",
     "better-sqlite3": "^12.11.1",

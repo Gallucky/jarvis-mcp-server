@@ -9,23 +9,28 @@ import {
     type DbDescribeTableInput,
 } from "../schemas/sqlite.js";
 
+// ─── shared logic — called by both the MCP tools below and the REST facade ──
+// (db_execute has no REST-facing counterpart, so it stays inline below —
+// arbitrary writes from a web-facing token are out of scope by design.)
+
+export function runQuery(sql: string, params: unknown[]): unknown[] {
+    return db.prepare(sql).all(...params);
+}
+
+export function listTables(): string[] {
+    const rows = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' ORDER BY name`).all() as { name: string }[];
+    return rows.map((r) => r.name);
+}
+
+export interface TableColumn { name: string; type: string; notnull: number; dflt_value: unknown; pk: number }
+
+export function describeTable(table: string): TableColumn[] {
+    return db.prepare(`PRAGMA table_info(?)`).all(table) as TableColumn[];
+}
+
 // The main and only function to register all of the SQLite tools with the MCP server.
 export function registerSqliteTools(server: McpServer): void {
 
-    // Registering the query search input tool with the MCP server.
-    // It contains the following properties:
-    // the name of the tool as string.
-    // object with:
-    //  title - a string "readable" name of the tool.
-    //  description - a string describing the tool and its arguments and return values.
-    //  inputSchema - a zod schema to follow based on the tool, with its arguments, types and return values.
-    //  annotations - an object with different types of hints enabled or disabled about the tool's behavior.
-    // The last argument is an async function that is taking all of the input parameters calling the service
-    // (the manager calls the worker) and returning the results (telling the worker what to do and waits the
-    // job to be done) to the MCP server which hands it to claude.
-
-    // The tool for querying the database is registered with the name "db_query"
-    // and it has a title, description, input schema and annotations.
     server.registerTool(
         "db_query",
         {
@@ -52,7 +57,7 @@ Examples:
         },
         async (params: DbQueryInput) => {
             try {
-                const rows = db.prepare(params.sql).all(...params.params);
+                const rows = runQuery(params.sql, params.params);
                 return {
                     content: [{ type: "text", text: JSON.stringify(rows, null, 2) }],
                     structuredContent: { rows },
@@ -66,8 +71,6 @@ Examples:
         }
     );
 
-    // The tool for executing statements against the database is registered with the name "db_execute"
-    // and it has a title, description, input schema and annotations.
     server.registerTool(
         "db_execute",
         {
@@ -103,8 +106,6 @@ Returns:
         }
     );
 
-    // The tool for listing all tables in the database is registered with the name "db_list_tables"
-    // and it has a title, description, input schema and annotations.
     server.registerTool(
         "db_list_tables",
         {
@@ -120,8 +121,7 @@ Returns:
         },
         async () => {
             try {
-                const rows = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' ORDER BY name`).all() as { name: string }[];
-                const names = rows.map((r) => r.name);
+                const names = listTables();
                 return {
                     content: [{ type: "text", text: names.length ? names.join("\n") : "No tables found." }],
                     structuredContent: { tables: names },
@@ -135,8 +135,6 @@ Returns:
         }
     );
 
-    // The tool for describing a table in the database is registered with the name "db_describe_table"
-    // and it has a title, description, input schema and annotations.
     server.registerTool(
         "db_describe_table",
         {
@@ -155,9 +153,7 @@ Args:
         },
         async (params: DbDescribeTableInput) => {
             try {
-                const rows = db.prepare(`PRAGMA table_info(?)`).all(params.table) as Array<{
-                    name: string; type: string; notnull: number; dflt_value: unknown; pk: number;
-                }>;
+                const rows = describeTable(params.table);
                 if (rows.length === 0) {
                     return { content: [{ type: "text", text: `No table named '${params.table}' found.` }] };
                 }

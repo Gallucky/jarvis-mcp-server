@@ -3,12 +3,14 @@ import { htmlShell } from "./htmlShell.js";
 import studyRouter from "./study.js";
 import claudeRouter from "./claude.js";
 import tasksScreenRouter from "./tasks_screen.js";
+import { buildGeminiChatRouter } from "./geminiChatRoute.js";
 
 const dashboardRouter = Router();
 
 dashboardRouter.use(studyRouter);
 dashboardRouter.use(claudeRouter);
 dashboardRouter.use(tasksScreenRouter);
+dashboardRouter.use(buildGeminiChatRouter());
 
 // Main OS dashboard (hub)
 dashboardRouter.get("/dashboard", (_req, res) => {

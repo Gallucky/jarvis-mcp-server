@@ -24,6 +24,7 @@ import { registerSqliteTools } from "./tools/sqlite.js";
 import { registerFilesystemTools } from "./tools/filesystem.js";
 import { registerVaultMemorySyncTools } from "./tools/vaultMemorySync.js";
 import { registerObsidianSkillTools } from "./tools/obsidian.js";
+import { registerObsidianStructuredTools } from "./tools/obsidianStructured.js";
 import { registerDiscordTools } from "./tools/discord.js";
 import { readFileSync } from "fs";
 import { dirname, join } from "path/win32";
@@ -32,6 +33,7 @@ import db from "./services/db.js";
 import { registerStudyTools } from "./tools/study/psychometric.js";
 import dashboardRouter from "./routes/dashboard.js";
 import { vaultIndex } from "./services/vaultIndex.js";
+import { buildApiRouter } from "./routes/api/index.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(join(__dirname, "../package.json"), "utf-8")) as { version: string };
@@ -54,6 +56,7 @@ function buildServer(obsidian: ObsidianClient): McpServer {
   registerStudyTools(server, db);
   registerVaultMemorySyncTools(server, obsidian);
   registerObsidianSkillTools(server);
+  registerObsidianStructuredTools(server);
   registerDiscordTools(server);
   return server;
 }
@@ -89,6 +92,16 @@ function allowCrossOriginMcpClients(req: express.Request, res: express.Response,
     res.sendStatus(204);
     return;
   }
+  next();
+}
+
+// Baseline hardening headers for the network-exposed routes (/mcp, /health,
+// /api/*). Doesn't replace the auth checks -- just standard defense-in-depth
+// so a browser/proxy in the path can't be tricked into MIME-sniffing a
+// response as something else, and HTTPS is pinned once a client has seen it.
+function securityHeaders(_req: express.Request, res: express.Response, next: express.NextFunction): void {
+  res.header("Strict-Transport-Security", "max-age=63072000; includeSubDomains");
+  res.header("X-Content-Type-Options", "nosniff");
   next();
 }
 
@@ -129,6 +142,8 @@ async function runMcp(obsidian: ObsidianClient): Promise<void> {
   // SDK OAuth router (sets up /.well-known/*, /register, /authorize, /token)
   app.use(mcpAuthRouter({ provider, issuerUrl: baseUrl }));
 
+  app.use(["/mcp", "/health", "/api"], securityHeaders);
+
   // Protect /mcp and /health -- include resourceMetadataUrl so Claude
   // can discover the OAuth server from the WWW-Authenticate header on 401
   const resourceMetadataUrl = `${baseUrl.origin}/.well-known/oauth-protected-resource`;
@@ -150,6 +165,12 @@ async function runMcp(obsidian: ObsidianClient): Promise<void> {
     await server.connect(transport);
     await transport.handleRequest(req, res, req.body);
   });
+
+  // Plain-HTTP REST facade for non-MCP callers (Gemini/AI Studio) -- see
+  // src/routes/api/index.ts for which tools are exposed and why. Auth is
+  // its own DB-backed bearer check (requireApiToken), independent of the
+  // OAuth flow above, since these callers can't do the OAuth/PKCE dance.
+  app.use("/api", buildApiRouter(obsidian, baseUrl.origin));
 
   app.listen(port, "127.0.0.1", () => {
     console.error(`jarvis-mcp-server (MCP) listening on http://127.0.0.1:${port}/mcp`);

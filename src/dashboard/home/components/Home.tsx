@@ -55,6 +55,7 @@ export function Home() {
         <HomeBlock icon="📚" name="לימודים" href="/dashboard/study" pct={studyPct} />
         <HomeBlock icon="🤖" name="Claude" href="/dashboard/claude" pct={claudePct} />
         <HomeBlock icon="✅" name="משימות" href="/dashboard/task" pct={taskPct} />
+        <HomeBlock icon="💬" name="Gemini" href="/dashboard/gemini" />
         {IDEA_BLOCKS.map(b => (
           <HomeBlock key={b.name} icon={b.icon} name={b.name} />
         ))}

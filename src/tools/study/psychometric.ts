@@ -7,6 +7,13 @@ import type { Database } from "better-sqlite3";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// ─── shared logic — called by both the MCP tool below and the REST facade ───
+
+export function syncStudyProgress(): string {
+    const scriptPath = path.resolve(__dirname, "../scripts/syncCheckboxes.js");
+    return execSync(`node "${scriptPath}"`, { encoding: "utf-8" });
+}
+
 export function registerStudyTools(server: McpServer, db: Database): void {
     // jarvis_sync_study_progress goes here
     // future: jarvis_study_stats, jarvis_weak_spots, etc.
@@ -31,8 +38,7 @@ Returns: how many exercise entries were synced.`,
         },
         async () => {
             try {
-                const scriptPath = path.resolve(__dirname, "../scripts/syncCheckboxes.js");
-                const output = execSync(`node "${scriptPath}"`, { encoding: "utf-8" });
+                const output = syncStudyProgress();
                 return { content: [{ type: "text", text: output }] };
             } catch (error) {
                 return {

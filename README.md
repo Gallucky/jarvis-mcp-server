@@ -394,6 +394,7 @@ See [`docs/adding-features-quick.md`](docs/adding-features-quick.md) for the exa
 
 | Version | Notes |
 |---|---|
+| 1.9.0 | DB-backed, per-client-revocable access tokens (`tokenStore.ts`, `mint-token`/`revoke-token`/`list-tokens` scripts) replacing the in-memory OAuth token map; new `/api/*` REST facade + OpenAPI schema for non-MCP callers (Gemini/AI Studio); phone-friendly `/dashboard/gemini` chat page (Gemini function calling against the vault, conversation history, markdown rendering, model switcher) plus a standalone `gemini-chat` terminal client; extracted shared tool logic so MCP tools and the REST facade share one implementation; split `obsidian.ts` into `obsidian.ts`/`obsidianStructured.ts`/`obsidianShared.ts`; added `Strict-Transport-Security`/`X-Content-Type-Options` headers |
 | 1.8.1 | Filled in version history from 1.3.1 through 1.8.0 (this table) |
 | 1.8.0 | Hardened `fs_*` tools' path safety checks; simplified the PM2 install/resurrect ops scripts |
 | 1.7.0 | Replaced Obsidian REST API vault access with a local file index; added Discord notification tool; task form control/searchbar styling fixes |
