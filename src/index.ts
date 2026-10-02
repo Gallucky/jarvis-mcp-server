@@ -129,7 +129,7 @@ async function runMcp(obsidian: ObsidianClient): Promise<void> {
   const provider = makeOAuthProvider();
 
   const app = express();
-  app.set("trust proxy", 1); // for Tailscale HTTPS reverse proxy
+  app.set("trust proxy", true); // for Tailscale HTTPS reverse proxy
   app.use(logRequests("mcp"));
   app.use(allowCrossOriginMcpClients);
   app.use(express.json());
@@ -148,7 +148,7 @@ async function runMcp(obsidian: ObsidianClient): Promise<void> {
   // can discover the OAuth server from the WWW-Authenticate header on 401
   const resourceMetadataUrl = `${baseUrl.origin}/.well-known/oauth-protected-resource`;
   const verifier = { verifyAccessToken: (t: string) => provider.verifyAccessToken(t) };
-  app.use(["/mcp", "/health"], requireBearerAuth({ verifier, resourceMetadataUrl }));
+  app.use("/mcp", requireBearerAuth({ verifier, resourceMetadataUrl }));
 
   app.get("/health", async (_req, res) => {
     const obsidianReachable = await obsidian.ping();
