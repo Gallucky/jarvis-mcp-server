@@ -27,6 +27,34 @@ interface StoredCode {
 const clients = new Map<string, OAuthClientInformationFull>();
 const codes = new Map<string, StoredCode>();
 
+/**
+ * Only these redirect URIs may ever receive an authorization code. Applies to
+ * dynamically registered clients too, so a stranger cannot register their own
+ * redirect_uri and phish the approval password. Add a URI here only if the
+ * connector genuinely needs it.
+ */
+const ALLOWED_REDIRECTS = new Set(["https://claude.ai/api/mcp/auth_callback"]);
+
+/**
+ * Global (not per-IP) limit on failed password attempts. Per-IP would be
+ * spoofable behind the Funnel proxy with `trust proxy: true`. Trade-off: someone
+ * can lock out *new* approvals for the window by spamming guesses; tokens that
+ * are already issued keep working.
+ */
+const MAX_FAILED_ATTEMPTS = 10;
+const ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
+const failedAttempts: number[] = [];
+
+function tooManyAttempts(): boolean {
+  const cutoff = Date.now() - ATTEMPT_WINDOW_MS;
+  while (failedAttempts.length && failedAttempts[0]! < cutoff) failedAttempts.shift();
+  return failedAttempts.length >= MAX_FAILED_ATTEMPTS;
+}
+
+function recordFailedAttempt(): void {
+  failedAttempts.push(Date.now());
+}
+
 export function makeOAuthProvider(): OAuthServerProvider {
   const staticId = process.env["OAUTH_CLIENT_ID"];
   const staticSecret = process.env["OAUTH_CLIENT_SECRET"];
@@ -48,6 +76,11 @@ export function makeOAuthProvider(): OAuthServerProvider {
       return clients.get(clientId);
     },
     registerClient(info) {
+      const redirectUris = (info.redirect_uris ?? []).map((u) => String(u));
+      if (redirectUris.length === 0 || !redirectUris.every((u) => ALLOWED_REDIRECTS.has(u))) {
+        console.error(`OAuth: rejected dynamic registration with redirect_uris=${JSON.stringify(redirectUris)}`);
+        throw new Error("redirect_uri not allowed");
+      }
       const clientId = crypto.randomBytes(16).toString("hex");
       const clientSecret = crypto.randomBytes(32).toString("hex");
       const full: OAuthClientInformationFull = {
@@ -124,33 +157,48 @@ export function makeOAuthProvider(): OAuthServerProvider {
 /** Mounts the password-gated form submission that actually issues authorization codes. */
 export function registerAuthorizeApproveRoute(app: Express): void {
   app.post("/authorize-approve", (req: Request, res: Response) => {
-    const { client_id, redirect_uri, code_challenge, state, password } = req.body ?? {};
-    const formFields = { clientId: client_id, redirectUri: redirect_uri, codeChallenge: code_challenge, state };
+    const body = req.body ?? {};
+    // Coerce everything to strings: a missing or non-string field must not crash the handler.
+    const clientId = String(body.client_id ?? "");
+    const redirectUri = String(body.redirect_uri ?? "");
+    const codeChallenge = String(body.code_challenge ?? "");
+    const state = body.state ? String(body.state) : undefined;
+    const password = String(body.password ?? "");
+    const formFields = { clientId, redirectUri, codeChallenge, state };
+
+    if (tooManyAttempts()) {
+      console.error("OAuth: approval blocked, too many failed attempts");
+      res.status(429).send(renderApprovalForm({ ...formFields, error: "Too many attempts. Try again later." }));
+      return;
+    }
 
     const expectedPassword = process.env.AUTH_APPROVAL_PASSWORD;
-    if (!expectedPassword || !passwordsMatch(String(password ?? ""), expectedPassword)) {
+    if (!expectedPassword || !passwordsMatch(password, expectedPassword)) {
+      recordFailedAttempt();
+      console.error("OAuth: failed approval attempt");
       res.status(401).send(renderApprovalForm({ ...formFields, error: "Incorrect password." }));
       return;
     }
 
-    const client = clients.get(client_id);
-    if (!client || !client.redirect_uris.includes(redirect_uri)) {
+    const client = clients.get(clientId);
+    if (!client || !client.redirect_uris.includes(redirectUri) || !ALLOWED_REDIRECTS.has(redirectUri)) {
       res.status(400).send("Invalid client or redirect URI.");
       return;
     }
 
     const code = crypto.randomBytes(16).toString("hex");
     codes.set(code, {
-      clientId: client_id,
-      redirectUri: redirect_uri,
-      codeChallenge: code_challenge,
+      clientId,
+      redirectUri,
+      codeChallenge,
       expiresAt: Date.now() + 5 * 60 * 1000,
     });
 
-    const dest = new URL(redirect_uri);
+    const dest = new URL(redirectUri);
     dest.searchParams.set("code", code);
     if (state) dest.searchParams.set("state", state);
-    console.error(`OAuth: approved client ${client_id}, redirecting to ${dest.toString()}`);
+    // Never log the code itself.
+    console.error(`OAuth: approved client ${clientId}, redirecting to ${dest.origin}${dest.pathname}`);
     res.redirect(dest.toString());
   });
 }
